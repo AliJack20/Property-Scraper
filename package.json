@@ -1,0 +1,22 @@
+{
+  "name": "project-1---scrapper",
+  "version": "1.0.0",
+  "description": "This project is an **automated web scraper** that:\r - ✅ Reads a list of property URLs from an **Excel input file**\r - ✅ Scrapes fresh daily data (pricing, availability, reviews, amenities, etc.)\r - ✅ Outputs the results as a **daily Excel snapshot**\r - ✅ Runs automatically every day using **GitHub Actions**\r - ✅ Uploads the output file as an **artifact** you can download anytime",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AliJack20/Property-Scraper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AliJack20/Property-Scraper/issues"
+  },
+  "homepage": "https://github.com/AliJack20/Property-Scraper#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.53.2",
+    "@types/node": "^24.0.10"
+  }
+}
