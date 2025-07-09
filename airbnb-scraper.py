@@ -135,20 +135,25 @@ def scrape_details_page(url):
             guest = None
         # You can add more information to scrape (example: price, description, etc.)
         
-        bed_bath_pattern = r'</span>(d+[^<]+)'
-        bed_bath = re.findall(bed_bath_pattern,html_content)
-        bed_bath_details = [] 
+        bed_bath_pattern = r'<li[^>]*class="l7n4lsf[^"]*"[^>]*>\s*(\d+)\s*(bedroom|bed|bath)'
+        bed_bath = re.findall(bed_bath_pattern, html_content)
+
+        bed_bath_details = []
         if bed_bath:
             for bed_bath_info in bed_bath:
-                bed_bath_details.append(bed_bath_info.strip())
+                number, label = bed_bath_info
+                bed_bath_details.append(f"{number} {label}")
+
         
-        reviews_pattern = r'l1nqfsv9[^>]+>([^<]+)</div>[^>]+>(d+[^<]+)</div>'
-        reviews_details =  re.findall(reviews_pattern,html_content)
-        review_list = []
-        if reviews_details:
-               for review in reviews_details:
-                    attribute, rating = review  # Unpack the attribute and rating
-                    review_list.append(f'{attribute} {rating}')  # Combine into a readable format
+        reviews_pattern = r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>'
+        reviews_match = re.search(reviews_pattern, html_content)
+        if reviews_match:
+            rating = reviews_match.group(1)
+            total_reviews = reviews_match.group(2)
+        else:
+            rating = None
+            total_reviews = None
+
 
 
         host_name_pattern = r't1gpcl1t atm_w4_16rzvi6 atm_9s_1o8liyq atm_gi_idpfg4 dir dir-ltr[^>]+>([^<]+)'
@@ -158,12 +163,12 @@ def scrape_details_page(url):
         else:
             host_name = None
 
-        total_review_pattern = r'pdp-reviews-[^>]+>[^>]+>(d+[^<]+)</span>'
-        total_review =  re.search(total_review_pattern,html_content)
-        if total_review:
-           total_review =  total_review.group(1)    
-        else:
-            total_review = None
+        #total_review_pattern = r'pdp-reviews-[^>]+>[^>]+>(d+[^<]+)</span>'
+        #total_review =  re.search(total_review_pattern,html_content)
+        #if total_review:
+        #   total_review =  total_review.group(1)    
+        #else:
+        #    total_review = None
 
 
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m dir dir-ltr[^>]+><div><span[^>]+>([^<]+)'
@@ -174,7 +179,7 @@ def scrape_details_page(url):
                  host_info_list.append(host_info_details)
         
         # Print the scraped information (for debugging purposes)
-        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Reviews: {review_list}n Host_name: {host_name}n total_review: {total_review}n Host Info: {host_info_list}n ")
+        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n ")
         
         # Return the information as a dictionary (or adjust based on your needs)
           # Store the scraped information in a dictionary
@@ -185,9 +190,9 @@ def scrape_details_page(url):
             "Address": address,
             "Guest": guest,
             "Bed_Bath_Details": bed_bath_details,
-            "Reviews": review_list,
+            "Rating": rating,
             "Host_Name": host_name,
-            "Total_Reviews": total_review,
+            "Total_Reviews": total_reviews,
             "Host_Info": host_info
         }
     except Exception as e:
@@ -196,7 +201,7 @@ def scrape_details_page(url):
 
 
 # Function to save data to CSV using pandas
-def save_to_csv(data, filename='airbnb_riyadh_test_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_latest_test_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
