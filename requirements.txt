@@ -1,2 +1,7 @@
-pandas
 openpyxl
+pandas
+playwright
+google-cloud-storage
+google-cloud-bigquery
+gspread
+oauth2client  # if using Google Sheets API
