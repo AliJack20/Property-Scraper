@@ -112,13 +112,13 @@ def scrape_details_page(url):
         else:
             title = None
         
-        price_pattern = r'($d+[^<]+)</span></span>[^>]+></div></div>'
-        price = re.search(price_pattern,html_content)
-    
+        price_pattern = r'<span[^>]*>\s*(\$\d+)\s*</span>'
+        price = re.search(price_pattern, html_content)
         if price:
             price = price.group(1)
         else:
             price = None
+
 
         address_pattern = r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>'
         address =  re.search(address_pattern,html_content)
@@ -196,7 +196,7 @@ def scrape_details_page(url):
 
 
 # Function to save data to CSV using pandas
-def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_test_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
