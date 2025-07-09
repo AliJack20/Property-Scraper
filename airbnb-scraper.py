@@ -93,9 +93,6 @@ print(f"Total URLs scraped: {len(url_list)}")
 
 
 
-
-
-
 # function to scrape information from a details page (title, price, etc.)
 def scrape_details_page(url):
     try:
