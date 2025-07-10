@@ -201,7 +201,7 @@ def scrape_details_page(url):
 
 
 # Function to save data to CSV using pandas
-def save_to_csv(data, filename='airbnb_riyadh_latest_test_data.csv'):
+def save_to_csv(data, filename='storage/airbnb_riyadh_latest_test_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")

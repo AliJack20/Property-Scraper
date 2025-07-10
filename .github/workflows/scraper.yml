@@ -1,37 +1,56 @@
-name: Daily Comp Tracker
+name: Airbnb Scraper Automation
 
 on:
-  schedule:
-    - cron: "0 2 * * *"   # 02:00 UTC = 05:00 KSA
   workflow_dispatch:
+  # Optional: schedule to run every day at midnight
+  # schedule:
+  #   - cron: "0 0 * * *"
 
 jobs:
-  run-tracker:
+  scrape:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: 🐍 Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install dependencies
+      - name: ⚙️ Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          playwright install
+          pip install selenium selenium-stealth pandas
 
-      - name: Run comp tracker
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_CREDS_JSON }}
+      - name: 🧩 Install Google Chrome
         run: |
-          python scrape.py
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
-      - name: Upload artifact
+      - name: 🧩 Install ChromeDriver
+        run: |
+          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
+          echo "Installed Chrome version: $CHROME_VERSION"
+          LATEST_CHROMEDRIVER=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r ".versions[] | select(.version | startswith(\"$CHROME_VERSION.\")) | .downloads.chromedriver[] | select(.platform == \"linux64\") | .url" | head -n 1)
+          wget -O chromedriver.zip "$LATEST_CHROMEDRIVER"
+          unzip chromedriver.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+          sudo chmod +x /usr/local/bin/chromedriver
+
+      - name: 🏃 Run the scraper script
+        env:
+          DISPLAY: ":99"
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -ac &  # For headless display
+          python airbnb-scraper.py <<< "1"  # replace 1 with number of pages
+
+      - name: 📦 Upload CSV output
         uses: actions/upload-artifact@v4
         with:
-          name: comp-tracker-snapshot
-          path: "*.csv"
+          name: airbnb-scrape-results
+          path: airbnb_riyadh_latest_test_data.csv
