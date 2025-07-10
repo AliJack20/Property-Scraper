@@ -1,10 +1,9 @@
 name: Airbnb Scraper Automation
 
 on:
-  workflow_dispatch:
-  # Optional: schedule to run every day at midnight
-  # schedule:
-  #   - cron: "0 0 * * *"
+  workflow_dispatch:  # still allows manual runs
+  schedule:
+    - cron: "0 2 * * *"  # every day at 02:00 UTC == 05:00 KSA
 
 jobs:
   scrape:
