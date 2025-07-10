@@ -52,6 +52,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: airbnb-scrape-results
-          path: airbnb_riyadh_latest_test(2)_data.csv
+          path: airbnb_riyadh_najris_data.csv
 
 
