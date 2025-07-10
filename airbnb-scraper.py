@@ -68,7 +68,7 @@ def go_to_next_page():
 url = "https://www.airbnb.com/s/Al-Aqeeq--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&refinement_paths%5B%5D=%2Fhomes&acp_id=7f314746-cda1-4ea3-b700-b8def06e2c61&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&place_id=ChIJ_-JKUqjjLj4RkJgM30Rxoc0&location_bb=QcZZzkI6ltxBxgcuQjpzhw%3D%3D"
 driver.get(url)
 
-num_pages = int(input("How many pages do you want to scrape? "))
+num_pages = 3 #int(input("How many pages do you want to scrape? "))
 
 url_list = []
 
