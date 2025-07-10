@@ -3,6 +3,7 @@ from selenium_stealth import stealth
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 import time
 import re
 import pandas as pd
@@ -36,9 +37,18 @@ def scrape_current_page():
 
 
 # Function to scroll to the bottom of the page
-def scroll_to_bottom():
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(2)  # Give time for the page to load additional content
+def scroll_to_bottom_incrementally():
+    SCROLL_PAUSE_TIME = 2
+    last_height = driver.execute_script("return document.body.scrollHeight")
+
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(SCROLL_PAUSE_TIME)
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
 
 # Function to wait for the "Next" button and click it
 def go_to_next_page():
@@ -100,7 +110,7 @@ def scrape_details_page(url):
         # Wait for the page to load (you can adjust this)
         time.sleep(2)
         html_content = driver.page_source
-        scroll_to_bottom()
+        scroll_to_bottom_incrementally()
         time.sleep(2) 
         # Regex pattern for scraping the title
         title_pattern = r'<h1[^>]+>([^<]+)</h1>'
@@ -112,10 +122,11 @@ def scrape_details_page(url):
         else:
             title = None
         
-        price_pattern = r'<span[^>]*>\s*(\$\d+)\s*</span>'
-        price = re.search(price_pattern, html_content)
-        if price:
-            price = price.group(1)
+        price_pattern = r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)'
+        price_match = re.search(price_pattern, html_content)
+
+        if price_match:
+            price = f"${price_match.group(1)}"
         else:
             price = None
 
@@ -177,9 +188,23 @@ def scrape_details_page(url):
         if host_info:
             for host_info_details in host_info:
                  host_info_list.append(host_info_details)
-        
+
+        amenities = []
+        try:
+            amenity_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._19xnuo97')
+            for block in amenity_blocks:
+                try:
+                    name_elem = block.find_element(By.CSS_SELECTOR, 'div.iikjzje > div')
+                    name = name_elem.text.strip()
+                    if name:
+                        amenities.append(name)
+                except:
+                    continue
+        except:
+            amenities = []
+                
         # Print the scraped information (for debugging purposes)
-        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n ")
+        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n Amenities: {amenities}" )
         
         # Return the information as a dictionary (or adjust based on your needs)
           # Store the scraped information in a dictionary
@@ -193,7 +218,8 @@ def scrape_details_page(url):
             "Rating": rating,
             "Host_Name": host_name,
             "Total_Reviews": total_reviews,
-            "Host_Info": host_info
+            "Host_Info": host_info,
+            "Amenities": amenities
         }
     except Exception as e:
         print(f"Error scraping {url}: {e}")
@@ -201,7 +227,7 @@ def scrape_details_page(url):
 
 
 # Function to save data to CSV using pandas
-def save_to_csv(data, filename='airbnb_riyadh_najris_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_najris_new(1)_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
