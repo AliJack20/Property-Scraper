@@ -204,7 +204,7 @@ def scrape_details_page(url):
             amenities = []
                 
         # Print the scraped information (for debugging purposes)
-        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n Amenities: {amenities}" )
+        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n Amenities: {amenities}n" )
         
         # Return the information as a dictionary (or adjust based on your needs)
           # Store the scraped information in a dictionary
@@ -224,7 +224,6 @@ def scrape_details_page(url):
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         return None
-
 
 # Function to save data to CSV using pandas
 def save_to_csv(data, filename='airbnb_riyadh_najris_new(1)_data.csv'):
