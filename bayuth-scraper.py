@@ -6,26 +6,26 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
 
-options = webdriver.ChromeOptions()
-options.add_argument("start-maximized")
-# options.add_argument("--headless")
-options.add_experimental_option("excludeSwitches", ["enable-automation"])
-options.add_experimental_option('useAutomationExtension', False)
-driver = webdriver.Chrome(options=options)
+# === Setup ChromeOptions ===
+def create_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument("start-maximized")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    driver = webdriver.Chrome(options=options)
+    stealth(driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True)
+    return driver
 
-stealth(driver,
-        languages=["en-US", "en"],
-        vendor="Google Inc.",
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=True,
-        )
+# === Collect all property URLs ===
+driver = create_driver()
 
-# 📌 Updated selectors for Bayut
-
-# Function to scrape all property URLs on current page
-def scrape_current_page():
+def scrape_current_page(driver):
     links = driver.find_elements(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
     urls = []
     for link in links:
@@ -34,65 +34,45 @@ def scrape_current_page():
             urls.append(href)
     return urls
 
-# Scroll down to load listings
-def scroll_to_bottom_incrementally():
-    SCROLL_PAUSE_TIME = 1
+def scroll_to_bottom_incrementally(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
-
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(SCROLL_PAUSE_TIME)
+        time.sleep(1)
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
         last_height = new_height
 
-# Try to click next page
-def go_to_next_page():
-    try:
-        next_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, 'a[aria-label="Next"]'))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
-        time.sleep(1)
-        next_button.click()
-        return True
-    except:
-        return False
-
-# ✅ BAYUT URL
-# Base URL WITHOUT page
 base_url = "https://www.bayut.sa/en/to-rent/3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
-
-num_pages = 5  # however many pages you want
+num_pages = 8  # big number
 
 url_list = []
-
 for page in range(1, num_pages + 1):
     if page == 1:
         url = base_url
     else:
         url = f"{base_url}&page={page}"
-    
     print(f"Scraping: {url}")
     driver.get(url)
     time.sleep(3)
-    
-    # If listings load on scroll, keep your scroll here:
-    scroll_to_bottom_incrementally()
-
-    page_urls = scrape_current_page()
+    scroll_to_bottom_incrementally(driver)
+    page_urls = scrape_current_page(driver)
+    print(f"Found {len(page_urls)} on page {page}")
     url_list.extend(page_urls)
-    print(f"Found {len(page_urls)} listings on page {page}")
 
-print(f"Total listings scraped: {len(url_list)}")
+driver.quit()
 
-# Scrape details page for each property
+print(f"✅ Total listings collected: {len(url_list)}")
+
+# === NEW: For each details page, use a fresh driver ===
+
 def scrape_details_page(url):
+    driver = create_driver()
     driver.get(url)
     time.sleep(3)
-    data = {}
-    data["URL"] = url
+
+    data = {"URL": url}
 
     try:
         title_elem = WebDriverWait(driver, 5).until(
@@ -126,17 +106,8 @@ def scrape_details_page(url):
     except:
         data["Area"] = None
 
-    # ✅ Get visible amenities first
-    
-    # ===============================
-# In your scrape_details_page
-# ===============================
-
-    # === Scrape always-visible amenities ===
     amenities = []
-
     try:
-        # Get visible amenity blocks
         visible_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._117b341a')
         for block in visible_blocks:
             spans = block.find_elements(By.CSS_SELECTOR, 'span._7181e5ac')
@@ -144,54 +115,38 @@ def scrape_details_page(url):
                 text = span.text.strip()
                 if text and text not in amenities:
                     amenities.append(text)
-    except Exception as e:
-        print(f"Could not get visible amenities: {e}")
+    except:
+        pass
 
-    # === Now check for `+ more` button and scrape hidden ones ===
     try:
         more_button = driver.find_element(By.CSS_SELECTOR, 'div._6e45c68c[aria-label*="More amenities"]')
         if more_button.is_displayed():
             driver.execute_script("arguments[0].click();", more_button)
-            # Wait for modal to appear
             WebDriverWait(driver, 5).until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, '#property-amenity-dialog'))
             )
-            # Scrape amenities inside modal
             modal_spans = driver.find_elements(By.CSS_SELECTOR, '#property-amenity-dialog span._7181e5ac')
             for span in modal_spans:
                 text = span.text.strip()
                 if text and text not in amenities:
                     amenities.append(text)
+    except:
+        pass
 
-            # OPTIONAL: Close modal
-            try:
-                close_button = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Close button"]')
-                driver.execute_script("arguments[0].click();", close_button)
-            except:
-                pass
-    except Exception as e:
-        print(f"No more amenities button or could not open modal: {e}")
-
-    # === Save to your result dict ===
     data["Amenities"] = ", ".join(amenities)
 
-
-
     print(data)
+    driver.quit()
     return data
 
-# Save to Excel
-def save_to_excel(data, filename='bayut_al_narjis(2)_properties.xlsx'):
-    df = pd.DataFrame(data)
-    df.to_excel(filename, index=False)
-    print(f"Data saved to {filename}")
-
+# === Loop through all listings ===
 scraped_data = []
-
-for url in url_list:
+for idx, url in enumerate(url_list):
+    print(f"Scraping detail ({idx + 1}/{len(url_list)})")
     details = scrape_details_page(url)
     scraped_data.append(details)
 
-save_to_excel(scraped_data)
+df = pd.DataFrame(scraped_data)
+df.to_excel("bayut_final_properties.xlsx", index=False)
+print("✅ Saved all data!")
 
-driver.quit()
