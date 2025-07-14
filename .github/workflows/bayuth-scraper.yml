@@ -1,0 +1,55 @@
+name: Bayut Scraper Automation
+
+on:
+  workflow_dispatch:  # Manual run enabled
+  schedule:
+    - cron: "0 2 * * *"  # every day at 02:00 UTC == 05:00 KSA
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: ⚙️ Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium selenium-stealth pandas openpyxl
+
+      - name: 🧩 Install Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: 🧩 Install ChromeDriver
+        run: |
+          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
+          echo "Installed Chrome version: $CHROME_VERSION"
+          LATEST_CHROMEDRIVER=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r ".versions[] | select(.version | startswith(\"$CHROME_VERSION.\")) | .downloads.chromedriver[] | select(.platform == \"linux64\") | .url" | head -n 1)
+          wget -O chromedriver.zip "$LATEST_CHROMEDRIVER"
+          unzip chromedriver.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+          sudo chmod +x /usr/local/bin/chromedriver
+
+      - name: 🏃 Run the Bayut scraper script
+        env:
+          DISPLAY: ":99"
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -ac &  # Virtual display for headless Chrome
+          python bayut-scraper.py <<< "1"  # Replace 1 with desired number of pages
+
+      - name: 📦 Upload XLSX output
+        uses: actions/upload-artifact@v4
+        with:
+          name: bayut-scrape-results
+          path: bayut_final_properties.xlsx
