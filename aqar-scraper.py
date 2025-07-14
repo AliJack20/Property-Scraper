@@ -1,71 +1,86 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from time import sleep
 import pandas as pd
+import time
 
-# -----------------------------------------------
-# ✅ 1️⃣ Setup Selenium
-# -----------------------------------------------
-
-options = webdriver.ChromeOptions()
+# -------------------------------
+# ✅ 1️⃣ Setup Chrome driver
+# -------------------------------
+options = Options()
 options.add_argument("--start-maximized")
-# options.add_argument("--headless")  # Uncomment if you want headless mode
+# options.add_argument("--headless")  # Uncomment for headless mode
 
 driver = webdriver.Chrome(
     service=Service(ChromeDriverManager().install()),
     options=options
 )
 
-# -----------------------------------------------
-# ✅ 2️⃣ Base config
-# -----------------------------------------------
-
-base_url = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?beds=eq,3&rent_period=eq,3"
+# -------------------------------
+# ✅ 2️⃣ Base URL & storage
+# -------------------------------
+base_url = "https://sa.aqar.fm/أراضي-للبيع/"
 all_links = []
-aqar = "https://sa.aqar.fm"
 
-# -----------------------------------------------
-# ✅ 3️⃣ Loop through pages and collect listing URLs
-# -----------------------------------------------
+num_pages = 3  # Pages to scrape
 
-num_pages = 3  # Change this to as many pages as you want
-for i in range(1, num_pages + 1):
-    url = f"{base_url}{i}"
+# -------------------------------
+# ✅ 3️⃣ Helper to scroll fully
+# -------------------------------
+def scroll_to_bottom():
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
+# -------------------------------
+# ✅ 4️⃣ Loop pages, grab listings
+# -------------------------------
+for page in range(1, num_pages + 1):
+    url = f"{base_url}{page}"
     driver.get(url)
-    print(f"Scraping: {url}")
+    print(f"🔵 Scraping page: {url}")
+
+    scroll_to_bottom()
 
     try:
-        # Wait for at least one listing link to appear
         WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href^="/listing/"]'))
+            EC.presence_of_element_located(
+                (By.XPATH, '//a[contains(@href, "/أراضي-للبيع/")]')
+            )
         )
     except:
-        print(f"No listings found on page {i}")
+        print(f"⚠️ No listings found on page {page}")
         continue
 
-    # Get all listing links
-    offers = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/listing/"]')
+    offers = driver.find_elements(
+        By.XPATH, '//a[contains(@href, "/أراضي-للبيع/")]'
+    )
 
     page_links = []
     for offer in offers:
         href = offer.get_attribute("href")
-        if href and href.startswith("/listing/"):
-            full_url = f"{aqar}{href}"
+        if href and "/أراضي-للبيع/" in href:
+            if href.startswith("http"):
+                full_url = href
+            else:
+                full_url = f"https://sa.aqar.fm{href}"
             if full_url not in all_links:
                 page_links.append(full_url)
 
-    print(f"Page {i}: Found {len(page_links)} listings.")
+    print(f"✅ Found {len(page_links)} listings on page {page}")
     all_links.extend(page_links)
 
-print(f"✅ Total unique listings found: {len(all_links)}")
+print(f"🟢 Total unique listings: {len(all_links)}")
 
-# -----------------------------------------------
-# ✅ 4️⃣ Scrape details from each listing page
-# -----------------------------------------------
 
 main_location = []
 sub_location = []
@@ -76,12 +91,11 @@ frontage = []
 purpose = []
 street_width = []
 
-for idx, listing_url in enumerate(all_links):
-    print(f"Scraping ({idx + 1}/{len(all_links)}): {listing_url}")
-    driver.get(listing_url)
-    sleep(2)
+for idx, link in enumerate(all_links):
+    driver.get(link)
+    print(f"🔵 ({idx + 1}/{len(all_links)}) {link}")
+    time.sleep(2)
 
-    # Breadcrumbs for location
     try:
         tree = driver.find_elements(By.CSS_SELECTOR, 'a.treeLink')
         if len(tree) > 3:
@@ -97,7 +111,6 @@ for idx, listing_url in enumerate(all_links):
         sub_location.append(None)
         hood.append(None)
 
-    # Table details
     try:
         table = driver.find_elements(By.CSS_SELECTOR, 'td[align="right"][dir="rtl"]')
         size.append(table[0].text.strip() if len(table) > 0 else None)
@@ -112,10 +125,9 @@ for idx, listing_url in enumerate(all_links):
         purpose.append(None)
         street_width.append(None)
 
-# -----------------------------------------------
-# ✅ 5️⃣ Save to CSV
-# -----------------------------------------------
-
+# -------------------------------
+# ✅ 6️⃣ Save results
+# -------------------------------
 df = pd.DataFrame({
     "main_location": main_location,
     "sub_location": sub_location,
@@ -127,10 +139,10 @@ df = pd.DataFrame({
     "street_width": street_width
 })
 
-print(df.head())
-df.to_csv("aqardata_final.csv", index=False)
-print("✅ Saved to aqardata_final.csv")
+df.to_csv("aqar_land_data_fixed.csv", index=False)
+print("🟢 Saved to aqar_land_data_fixed.csv")
 
-# -----------------------------------------------
-# ✅ 6️⃣ Done!
-# -----------------------------------------------
+# -------------------------------
+# ✅ 7️⃣ Done
+# -------------------------------
+driver.quit()

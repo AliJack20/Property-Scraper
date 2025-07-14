@@ -96,9 +96,9 @@ def scrape_details_page(url):
         for item in info_items:
             text = item.text.strip().lower()
             if "bed" in text and not beds:
-                beds = text.replace("Â", "").replace("·", "").replace("bedroom","")strip()
+                beds = text.replace("Â", "").replace("·", "").replace("bedrooms","").replace("bedroom", "").strip()
             elif "bath" in text and not baths:
-                baths = text.replace("Â", "").replace("·", "").replace("bath","")strip()
+                baths = text.replace("Â", "").replace("·", "").replace("baths","").replace("bath","").strip()
 
         # Reviews
         reviews_pattern = r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>'
@@ -120,39 +120,7 @@ def scrape_details_page(url):
         # --- NEW: Amenities logic ---
         amenities = []
 
-        try:
-            # Try click 'Show all amenities' if present
-            show_all_btn = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, '//button[.//span[contains(text(), "Show all")]]'))
-            )
-            driver.execute_script("arguments[0].click();", show_all_btn)
-            time.sleep(2)
-        except:
-            pass
-
-        try:
-            # SCROLL to amenities
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(3)
-
-            # DEBUG: Dump HTML
-            print("=== HTML ===")
-            print(driver.page_source[:5000])  # Just a snippet
-            print("=== END ===")
-
-            # Robust XPath
-            amenity_blocks = driver.find_elements(
-                By.XPATH,
-                '//div[contains(@data-section-id, "AMENITIES")]//div[contains(@class,"iikjzje")]/div[not(*)]'
-            )
-
-            for block in amenity_blocks:
-                text = block.text.strip()
-                if text and not text.lower().startswith("unavailable"):
-                    amenities.append(text)
-
-        except Exception as e:
-            print(f"Amenities scrape error: {e}")
+       
 
         # --- NEW: Property details ---
 
@@ -181,7 +149,7 @@ def scrape_details_page(url):
 
 
 
-def save_to_csv(data, filename='airbnb_riyadh_new_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_new(1)_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"✅ Data saved to {filename}")
