@@ -96,9 +96,9 @@ def scrape_details_page(url):
         for item in info_items:
             text = item.text.strip().lower()
             if "bed" in text and not beds:
-                beds = text.replace("Â", "").replace("·", "").strip()
+                beds = text.replace("Â", "").replace("·", "").replace("bedroom","")strip()
             elif "bath" in text and not baths:
-                baths = text.replace("Â", "").replace("·", "").strip()
+                baths = text.replace("Â", "").replace("·", "").replace("bath","")strip()
 
         # Reviews
         reviews_pattern = r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>'
