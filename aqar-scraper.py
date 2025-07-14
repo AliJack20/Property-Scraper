@@ -8,9 +8,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import time
 
-# -------------------------------
-# ✅ 1️⃣ Setup Chrome driver
-# -------------------------------
+
 options = Options()
 options.add_argument("--start-maximized")
 # options.add_argument("--headless")  # Uncomment for headless mode
@@ -23,7 +21,7 @@ driver = webdriver.Chrome(
 # -------------------------------
 # ✅ 2️⃣ Base URL & storage
 # -------------------------------
-base_url = "https://sa.aqar.fm/أراضي-للبيع/"
+base_url = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?beds=eq,3&rent_period=eq,3"
 all_links = []
 
 num_pages = 3  # Pages to scrape
@@ -41,9 +39,7 @@ def scroll_to_bottom():
             break
         last_height = new_height
 
-# -------------------------------
-# ✅ 4️⃣ Loop pages, grab listings
-# -------------------------------
+
 for page in range(1, num_pages + 1):
     url = f"{base_url}{page}"
     driver.get(url)
@@ -125,9 +121,7 @@ for idx, link in enumerate(all_links):
         purpose.append(None)
         street_width.append(None)
 
-# -------------------------------
-# ✅ 6️⃣ Save results
-# -------------------------------
+
 df = pd.DataFrame({
     "main_location": main_location,
     "sub_location": sub_location,
