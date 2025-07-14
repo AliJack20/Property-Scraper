@@ -163,7 +163,7 @@ def scrape_details_page(url):
         return {
             "url": url,
             "Title": title,
-            "Price": price,
+            "Price (5 Nights)": price,
             "Address": address,
             "Guest": guest,
             "Beds": beds,
