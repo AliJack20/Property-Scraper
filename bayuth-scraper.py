@@ -45,7 +45,7 @@ def scroll_to_bottom_incrementally(driver):
         last_height = new_height
 
 base_url = "https://www.bayut.sa/en/to-rent/3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
-num_pages = 8  # big number
+num_pages = 7  # big number
 
 url_list = []
 for page in range(1, num_pages + 1):
