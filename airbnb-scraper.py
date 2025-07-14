@@ -75,10 +75,10 @@ def go_to_next_page():
 
 
 # base url
-url = "https://www.airbnb.com/s/Al-Narjis--Riyadh-Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&date_picker_type=calendar&refinement_paths%5B%5D=%2Fhomes&source=structured_search_input_header&search_type=autocomplete_click&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&place_id=ChIJb030nzX7Lj4RwIxfeQygX-c&location_bb=QcfU3UI6zfFBxnt8QjpaxA%3D%3D&acp_id=329e63d6-d6ef-4461-8078-f5a025ca60ce"
+url = "https://www.airbnb.com/s/An~Narjis--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&place_id=ChIJb030nzX7Lj4RwIxfeQygX-c&acp_id=329e63d6-d6ef-4461-8078-f5a025ca60ce&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&query=An-Narjis%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&federated_search_session_id=fa92bc82-c2ed-4814-8821-d6521cbf364d&pagination_search=true&cursor=eyJzZWN0aW9uX29mZnNldCI6MCwiaXRlbXNfb2Zmc2V0IjoyNTIsInZlcnNpb24iOjF9"
 driver.get(url)
 
-num_pages = 3 #int(input("How many pages do you want to scrape? "))
+num_pages = 8 #int(input("How many pages do you want to scrape? "))
 
 url_list = []
 
