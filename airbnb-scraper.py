@@ -8,7 +8,7 @@ import time
 import pandas as pd
 import re
 
-# ------------- Setup Chrome -------------
+
 options = webdriver.ChromeOptions()
 options.add_argument("start-maximized")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -25,7 +25,6 @@ stealth(driver,
     fix_hairline=True,
 )
 
-# ------------- Helpers -------------
 
 def scrape_current_page():
     links = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/rooms/"]')
@@ -122,28 +121,42 @@ def scrape_details_page(url):
         amenities = []
 
         try:
-            # Try to click "Show all amenities" button if present
+            # Try click 'Show all amenities' if present
             show_all_btn = WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, '//button[.//span[contains(text(), "Show all")]]'))
             )
             driver.execute_script("arguments[0].click();", show_all_btn)
             time.sleep(2)
         except:
-            pass  # Button may not exist, fallback to visible
+            pass
 
         try:
-            # Try to find amenities in modal OR default section
+            # SCROLL to amenities
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(3)
+
+            # DEBUG: Dump HTML
+            print("=== HTML ===")
+            print(driver.page_source[:5000])  # Just a snippet
+            print("=== END ===")
+
+            # Robust XPath
             amenity_blocks = driver.find_elements(
                 By.XPATH,
-                '//div[contains(@data-section-id,"AMENITIES")]//div[contains(@class,"iikjzje")]/div[1]'
+                '//div[contains(@data-section-id, "AMENITIES")]//div[contains(@class,"iikjzje")]/div[not(*)]'
             )
+
             for block in amenity_blocks:
-                name = block.text.strip()
-                if name:
-                    amenities.append(name)
+                text = block.text.strip()
+                if text and not text.lower().startswith("unavailable"):
+                    amenities.append(text)
+
         except Exception as e:
             print(f"Amenities scrape error: {e}")
-            amenities = []
+
+        # --- NEW: Property details ---
+
+
 
         print(f"Title: {title} | Price: {price} | Beds: {beds} | Baths: {baths} | Amenities: {amenities}")
 
@@ -159,7 +172,7 @@ def scrape_details_page(url):
             "Host_Name": host_name,
             "Total_Reviews": total_reviews,
             "Host_Info": host_info_list,
-            "Amenities": amenities
+            "Amenities": amenities,
         }
 
     except Exception as e:
@@ -173,8 +186,6 @@ def save_to_csv(data, filename='airbnb_riyadh_new_data.csv'):
     df.to_csv(filename, index=False)
     print(f"✅ Data saved to {filename}")
 
-
-# ----------------- Run -----------------
 
 url = "https://www.airbnb.com/s/Al-Narjis--Riyadh-Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&date_picker_type=calendar&refinement_paths%5B%5D=%2Fhomes"
 driver.get(url)
@@ -195,7 +206,7 @@ for page in range(num_pages):
 
     print(f"Collected so far: {len(url_list)} listings")
 
-    # Find next link href instead of clicking
+    
     try:
         next_link = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, 'a[aria-label="Next"]'))

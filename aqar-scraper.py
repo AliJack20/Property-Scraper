@@ -1,109 +1,136 @@
 from selenium import webdriver
-from selenium_stealth import stealth
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from time import sleep
 import pandas as pd
 
-# ✅ Setup Chrome with stealth
-options = webdriver.ChromeOptions()
-options.add_argument("start-maximized")
-options.add_argument("--disable-blink-features=AutomationControlled")
-# Uncomment headless if you want
-# options.add_argument("--headless")
-driver = webdriver.Chrome(options=options)
+# -----------------------------------------------
+# ✅ 1️⃣ Setup Selenium
+# -----------------------------------------------
 
-stealth(driver,
-    languages=["en-US", "en"],
-    vendor="Google Inc.",
-    platform="Win32",
-    webgl_vendor="Intel Inc.",
-    renderer="Intel Iris OpenGL Engine",
-    fix_hairline=True,
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")
+# options.add_argument("--headless")  # Uncomment if you want headless mode
+
+driver = webdriver.Chrome(
+    service=Service(ChromeDriverManager().install()),
+    options=options
 )
 
-# ✅ Base URL
-base_url = "https://sa.aqar.fm/شقق-للإيجار/الرياض/شمال-الرياض/حي-النرجس?beds=eq,3&rent_period=eq,3"
+# -----------------------------------------------
+# ✅ 2️⃣ Base config
+# -----------------------------------------------
 
-num_pages = 5  # How many pages you want
+base_url = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?beds=eq,3&rent_period=eq,3"
+all_links = []
+aqar = "https://sa.aqar.fm"
 
-url_list = []
+# -----------------------------------------------
+# ✅ 3️⃣ Loop through pages and collect listing URLs
+# -----------------------------------------------
 
-# ✅ Function to scrape all listing URLs on a page
-def scrape_listing_urls():
-    time.sleep(2)
-    links = driver.find_elements(By.CSS_SELECTOR, 'a.card--clickable')
-    urls = []
-    for link in links:
-        href = link.get_attribute("href")
-        if href and href not in urls:
-            urls.append(href)
-    return urls
-
-# ✅ Loop through pages
-for page in range(1, num_pages + 1):
-    if page == 1:
-        url = base_url
-    else:
-        url = f"{base_url}&page={page}"
-    print(f"Scraping page: {url}")
+num_pages = 3  # Change this to as many pages as you want
+for i in range(1, num_pages + 1):
+    url = f"{base_url}{i}"
     driver.get(url)
-    time.sleep(5)
-
-    page_urls = scrape_listing_urls()
-    print(f"Found {len(page_urls)} listings on page {page}")
-    url_list.extend(page_urls)
-
-print(f"Total URLs found: {len(url_list)}")
-
-# ✅ Function to scrape details
-def scrape_details_page(url):
-    driver.get(url)
-    time.sleep(3)
-    data = {"URL": url}
+    print(f"Scraping: {url}")
 
     try:
-        title = driver.find_element(By.CSS_SELECTOR, 'h1')
-        data["Title"] = title.text.strip()
+        # Wait for at least one listing link to appear
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href^="/listing/"]'))
+        )
     except:
-        data["Title"] = None
+        print(f"No listings found on page {i}")
+        continue
 
+    # Get all listing links
+    offers = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/listing/"]')
+
+    page_links = []
+    for offer in offers:
+        href = offer.get_attribute("href")
+        if href and href.startswith("/listing/"):
+            full_url = f"{aqar}{href}"
+            if full_url not in all_links:
+                page_links.append(full_url)
+
+    print(f"Page {i}: Found {len(page_links)} listings.")
+    all_links.extend(page_links)
+
+print(f"✅ Total unique listings found: {len(all_links)}")
+
+# -----------------------------------------------
+# ✅ 4️⃣ Scrape details from each listing page
+# -----------------------------------------------
+
+main_location = []
+sub_location = []
+hood = []
+size = []
+pricepm = []
+frontage = []
+purpose = []
+street_width = []
+
+for idx, listing_url in enumerate(all_links):
+    print(f"Scraping ({idx + 1}/{len(all_links)}): {listing_url}")
+    driver.get(listing_url)
+    sleep(2)
+
+    # Breadcrumbs for location
     try:
-        price = driver.find_element(By.CSS_SELECTOR, 'span.price--text')
-        data["Price"] = price.text.strip()
+        tree = driver.find_elements(By.CSS_SELECTOR, 'a.treeLink')
+        if len(tree) > 3:
+            main_location.append(tree[1].text.strip())
+            sub_location.append(tree[2].text.strip())
+            hood.append(tree[3].text.strip())
+        else:
+            main_location.append(tree[1].text.strip())
+            sub_location.append(None)
+            hood.append(tree[2].text.strip())
     except:
-        data["Price"] = None
+        main_location.append(None)
+        sub_location.append(None)
+        hood.append(None)
 
+    # Table details
     try:
-        # Beds/Baths/Area might be inside spans with class feature--item
-        features = driver.find_elements(By.CSS_SELECTOR, 'span.feature--item')
-        for feat in features:
-            text = feat.text.strip()
-            if "غرفة" in text or "غرف" in text:
-                data["Beds"] = text
-            elif "دورة" in text or "حمام" in text:
-                data["Baths"] = text
-            elif "متر" in text:
-                data["Area"] = text
+        table = driver.find_elements(By.CSS_SELECTOR, 'td[align="right"][dir="rtl"]')
+        size.append(table[0].text.strip() if len(table) > 0 else None)
+        pricepm.append(table[2].text.strip() if len(table) > 2 else None)
+        frontage.append(table[4].text.strip() if len(table) > 4 else None)
+        purpose.append(table[6].text.strip() if len(table) > 6 else None)
+        street_width.append(table[8].text.strip() if len(table) > 8 else None)
     except:
-        data["Beds"] = data.get("Beds", None)
-        data["Baths"] = data.get("Baths", None)
-        data["Area"] = data.get("Area", None)
+        size.append(None)
+        pricepm.append(None)
+        frontage.append(None)
+        purpose.append(None)
+        street_width.append(None)
 
-    print(data)
-    return data
+# -----------------------------------------------
+# ✅ 5️⃣ Save to CSV
+# -----------------------------------------------
 
-# ✅ Scrape each listing
-results = []
-for idx, url in enumerate(url_list):
-    print(f"Scraping details ({idx + 1}/{len(url_list)})")
-    details = scrape_details_page(url)
-    results.append(details)
+df = pd.DataFrame({
+    "main_location": main_location,
+    "sub_location": sub_location,
+    "hood": hood,
+    "size": size,
+    "price_per_meter": pricepm,
+    "frontage": frontage,
+    "purpose": purpose,
+    "street_width": street_width
+})
 
-# ✅ Save to Excel
-df = pd.DataFrame(results)
-df.to_excel("aqarfm_properties.xlsx", index=False)
-print("Saved to aqarfm_properties.xlsx")
+print(df.head())
+df.to_csv("aqardata_final.csv", index=False)
+print("✅ Saved to aqardata_final.csv")
 
-driver.quit()
+# -----------------------------------------------
+# ✅ 6️⃣ Done!
+# -----------------------------------------------
