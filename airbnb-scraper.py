@@ -91,15 +91,15 @@ def scrape_details_page(url):
         guest = re.search(guest_pattern, html_content)
         guest = guest.group(1).strip() if guest else None
 
-        # Beds & baths by Selenium (reliable!)
+        # Beds & baths by Selenium
         beds = baths = None
         info_items = driver.find_elements(By.CSS_SELECTOR, "li.l7n4lsf")
         for item in info_items:
             text = item.text.strip().lower()
             if "bed" in text and not beds:
-                beds = text
+                beds = text.replace("Â", "").replace("·", "").strip()
             elif "bath" in text and not baths:
-                baths = text
+                baths = text.replace("Â", "").replace("·", "").strip()
 
         # Reviews
         reviews_pattern = r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>'
@@ -108,31 +108,44 @@ def scrape_details_page(url):
         total_reviews = reviews_match.group(2) if reviews_match else None
 
         # Host name
-        host_name_pattern = r't1gpcl1t[^>]+>([^<]+)'
-        host_name = re.search(host_name_pattern, html_content)
-        host_name = host_name.group(1).strip() if host_name else None
+        host_name_pattern = r'Hosted by ([A-Za-z0-9 ]+)'
+        host_name_match = re.search(host_name_pattern, html_content)
+        host_name = host_name_match.group(1).strip() if host_name_match else None
+
 
         # Host info
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m[^>]+><div><span[^>]+>([^<]+)'
         host_info = re.findall(host_info_pattern, html_content)
         host_info_list = [info.strip() for info in host_info]
 
-        # Amenities with Selenium
+        # --- NEW: Amenities logic ---
         amenities = []
+
         try:
-            amenity_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._19xnuo97')
-            for block in amenity_blocks:
-                try:
-                    name_elem = block.find_element(By.CSS_SELECTOR, 'div.iikjzje > div')
-                    name = name_elem.text.strip()
-                    if name:
-                        amenities.append(name)
-                except:
-                    continue
+            # Try to click "Show all amenities" button if present
+            show_all_btn = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//button[.//span[contains(text(), "Show all")]]'))
+            )
+            driver.execute_script("arguments[0].click();", show_all_btn)
+            time.sleep(2)
         except:
+            pass  # Button may not exist, fallback to visible
+
+        try:
+            # Try to find amenities in modal OR default section
+            amenity_blocks = driver.find_elements(
+                By.XPATH,
+                '//div[contains(@data-section-id,"AMENITIES")]//div[contains(@class,"iikjzje")]/div[1]'
+            )
+            for block in amenity_blocks:
+                name = block.text.strip()
+                if name:
+                    amenities.append(name)
+        except Exception as e:
+            print(f"Amenities scrape error: {e}")
             amenities = []
 
-        print(f"Title: {title} | Price: {price} | Beds: {beds} | Baths: {baths}")
+        print(f"Title: {title} | Price: {price} | Beds: {beds} | Baths: {baths} | Amenities: {amenities}")
 
         return {
             "url": url,
@@ -148,9 +161,11 @@ def scrape_details_page(url):
             "Host_Info": host_info_list,
             "Amenities": amenities
         }
+
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         return None
+
 
 
 def save_to_csv(data, filename='airbnb_riyadh_new_data.csv'):
@@ -164,7 +179,7 @@ def save_to_csv(data, filename='airbnb_riyadh_new_data.csv'):
 url = "https://www.airbnb.com/s/Al-Narjis--Riyadh-Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&date_picker_type=calendar&refinement_paths%5B%5D=%2Fhomes"
 driver.get(url)
 
-num_pages = 3
+num_pages = 1
 
 url_list = []
 
