@@ -1,140 +1,113 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
+import re
 import time
 
 
 options = Options()
 options.add_argument("--start-maximized")
-# options.add_argument("--headless")  # Uncomment for headless mode
+# options.add_argument("--headless")  # Optional
 
 driver = webdriver.Chrome(
     service=Service(ChromeDriverManager().install()),
     options=options
 )
 
+base_url = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?rent_period=eq,3&beds=eq,3"
 
-base_url = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?beds=eq,3&rent_period=eq,3"
-all_links = []
+num_pages = 3  # set pages you want
 
-num_pages = 3  # Pages to scrape
-
-# -------------------------------
-# ✅ 3️⃣ Helper to scroll fully
-# -------------------------------
-def scroll_to_bottom():
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(2)
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
+urls, prices, bedrooms, bathrooms, areas = [], [], [], [], []
 
 
 for page in range(1, num_pages + 1):
-    url = f"{base_url}{page}"
+    if page == 1:
+        url = base_url
+    else:
+        url = f"{base_url}/{page}"
+
+    print(f"Scraping page: {url}")
     driver.get(url)
-    print(f"🔵 Scraping page: {url}")
 
-    scroll_to_bottom()
-
-    try:
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located(
-                (By.XPATH, '//a[contains(@href, "/أراضي-للبيع/")]')
-            )
-        )
-    except:
-        print(f"⚠️ No listings found on page {page}")
-        continue
-
-    offers = driver.find_elements(
-        By.XPATH, '//a[contains(@href, "/أراضي-للبيع/")]'
-    )
-
-    page_links = []
-    for offer in offers:
-        href = offer.get_attribute("href")
-        if href and "/أراضي-للبيع/" in href:
-            if href.startswith("http"):
-                full_url = href
-            else:
-                full_url = f"https://sa.aqar.fm{href}"
-            if full_url not in all_links:
-                page_links.append(full_url)
-
-    print(f"✅ Found {len(page_links)} listings on page {page}")
-    all_links.extend(page_links)
-
-print(f"🟢 Total unique listings: {len(all_links)}")
-
-
-main_location = []
-sub_location = []
-hood = []
-size = []
-pricepm = []
-frontage = []
-purpose = []
-street_width = []
-
-for idx, link in enumerate(all_links):
-    driver.get(link)
-    print(f"🔵 ({idx + 1}/{len(all_links)}) {link}")
+    # Let content load + scroll
+    time.sleep(2)
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
 
+    # Wait for listings
     try:
-        tree = driver.find_elements(By.CSS_SELECTOR, 'a.treeLink')
-        if len(tree) > 3:
-            main_location.append(tree[1].text.strip())
-            sub_location.append(tree[2].text.strip())
-            hood.append(tree[3].text.strip())
-        else:
-            main_location.append(tree[1].text.strip())
-            sub_location.append(None)
-            hood.append(tree[2].text.strip())
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div._listingCard__PoR_B'))
+        )
     except:
-        main_location.append(None)
-        sub_location.append(None)
-        hood.append(None)
+        print(f"No listings found on page {page}")
+        continue
 
-    try:
-        table = driver.find_elements(By.CSS_SELECTOR, 'td[align="right"][dir="rtl"]')
-        size.append(table[0].text.strip() if len(table) > 0 else None)
-        pricepm.append(table[2].text.strip() if len(table) > 2 else None)
-        frontage.append(table[4].text.strip() if len(table) > 4 else None)
-        purpose.append(table[6].text.strip() if len(table) > 6 else None)
-        street_width.append(table[8].text.strip() if len(table) > 8 else None)
-    except:
-        size.append(None)
-        pricepm.append(None)
-        frontage.append(None)
-        purpose.append(None)
-        street_width.append(None)
+    cards = driver.find_elements(By.CSS_SELECTOR, 'div._listingCard__PoR_B')
+    print(f"Found {len(cards)} cards on page {page}")
 
+    for card in cards:
+        # ✅ Get the parent <a> tag for URL
+        try:
+            parent_a = card.find_element(By.XPATH, "./ancestor::a[1]")
+            href = parent_a.get_attribute("href")
+            if href.startswith("/"):
+                href = "https://sa.aqar.fm" + href
+        except:
+            href = None
 
+        # ✅ Price clean
+        try:
+            raw_price = card.find_element(By.CSS_SELECTOR, 'p._price__X51mi span').text.strip()
+            clean_price = re.findall(r'[\d,]+', raw_price)
+            price = clean_price[0] if clean_price else None
+        except:
+            price = None
+
+        # ✅ Specs
+        specs = card.find_elements(By.CSS_SELECTOR, 'div._specs__nbsgm div._spec__SIJiK')
+
+        bed = bath = area = None
+
+        for spec in specs:
+            try:
+                icon = spec.find_element(By.TAG_NAME, 'img').get_attribute('alt')
+                value = spec.text.strip()
+
+                if 'الغرف' in icon or 'bed' in icon or 'عدد الغرف' in icon:
+                    bed = re.sub(r'\D', '', value)
+                elif 'الحمامات' in icon or 'bath' in icon or 'عدد الحمامات' in icon:
+                    bath = re.sub(r'\D', '', value)
+                elif 'المساحة' in icon or 'area' in icon:
+                    area_match = re.findall(r'\d+', value.replace('\xa0', ''))
+                    area = area_match[0] if area_match else None
+            except:
+                continue
+
+        urls.append(href)
+        prices.append(price)
+        bedrooms.append(bed)
+        bathrooms.append(bath)
+        areas.append(area)
+
+# -------------------------------
+# ✅ Save results
+# -------------------------------
 df = pd.DataFrame({
-    "main_location": main_location,
-    "sub_location": sub_location,
-    "hood": hood,
-    "size": size,
-    "price_per_meter": pricepm,
-    "frontage": frontage,
-    "purpose": purpose,
-    "street_width": street_width
+    "URL": urls,
+    "Price": prices,
+    "Bedrooms": bedrooms,
+    "Bathrooms": bathrooms,
+    "Area": areas
 })
 
-df.to_csv("aqar_land_data_fixed.csv", index=False)
-print("🟢 Saved to aqar_land_data_fixed.csv")
+df.to_csv("aqar_all_pages.csv", index=False)
+print("✅ Saved to aqar_all_pages.csv")
 
-# -------------------------------
-# ✅ 7️⃣ Done
-# -------------------------------
 driver.quit()
