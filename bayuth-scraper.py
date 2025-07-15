@@ -45,7 +45,7 @@ def scroll_to_bottom_incrementally(driver):
         last_height = new_height
 
 base_url = "https://www.bayut.sa/en/to-rent/2,3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
-num_pages = 11  # big number
+num_pages = 11 # big number
 
 url_list = []
 for page in range(1, num_pages + 1):
@@ -147,6 +147,6 @@ for idx, url in enumerate(url_list):
     scraped_data.append(details)
 
 df = pd.DataFrame(scraped_data)
-df.to_excel("bayut_final_al-najris_properties.xlsx", index=False)
+df.to_excel("bayut_final_properties.xlsx", index=False)
 print("✅ Saved all data!")
 
