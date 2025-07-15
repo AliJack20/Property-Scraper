@@ -147,6 +147,6 @@ for idx, url in enumerate(url_list):
     scraped_data.append(details)
 
 df = pd.DataFrame(scraped_data)
-df.to_excel("bayut_final_properties.xlsx", index=False)
+df.to_excel("bayut_final_al-najris_properties.xlsx", index=False)
 print("✅ Saved all data!")
 
