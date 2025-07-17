@@ -181,7 +181,7 @@ if not login(driver, EMAIL, PASSWORD):
 
 # === Scrape paginated results ===
 all_data = []
-num_pages = 1
+num_pages = 2
 for page in range(1, num_pages + 1):
     url = base_url if page == 1 else f"{base_url}&page={page}"
     print(f"\n📄 Scraping page {page}: {url}")
@@ -193,5 +193,5 @@ for page in range(1, num_pages + 1):
 
 driver.quit()
 df = pd.DataFrame(all_data)
-df.to_excel("bayut_card_data_final.xlsx", index=False)
-print("✅ Saved to bayut_card_data_final.xlsx")
+df.to_excel("bayut_final_properties.xlsx", index=False)
+print("✅ Saved to bayut_final_properties.xlsx")
