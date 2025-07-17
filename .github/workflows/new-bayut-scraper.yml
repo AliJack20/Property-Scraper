@@ -1,4 +1,4 @@
-name: Bayut Scraper Automation
+name: New Bayut Scraper Automation
 
 on:
   workflow_dispatch:  # Manual run enabled
