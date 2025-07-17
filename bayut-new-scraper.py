@@ -163,6 +163,8 @@ def scrape_listings_from_cards(driver):
         location_deed = None
         furnishing = None
         reactivated_date = None
+        agency_name = None
+        agent_name = None
 
         if data["URL"]:
             original_window = driver.current_window_handle
@@ -174,7 +176,7 @@ def scrape_listings_from_cards(driver):
                     EC.presence_of_element_located((By.CSS_SELECTOR, 'span._5746987e'))
                 )
 
-                # Location Description as per Deed
+                # Location Deed
                 label_elements = driver.find_elements(By.CSS_SELECTOR, 'span._3a13c305')
                 for label in label_elements:
                     if "Location Description as per Deed:" in label.text:
@@ -182,21 +184,34 @@ def scrape_listings_from_cards(driver):
                         location_deed = deed_elem.text.strip()
                         break
 
-                # Furnishing & Reactivated Date
-                details = driver.find_elements(By.CSS_SELECTOR, 'ul[aria-label="Property details"] li')
-                for item in details:
-                    try:
-                        label = item.find_element(By.CSS_SELECTOR, 'span.ed0db22a').text.strip()
-                        value = item.find_element(By.CSS_SELECTOR, 'span._2fdf7fc5').text.strip()
-                        if label == "Furnishing":
-                            furnishing = value
-                        elif label == "Added on":
-                            reactivated_date = value
-                    except:
-                        continue
+                # Furnishing
+                try:
+                    furnishing = driver.find_element(By.XPATH, '//li[span[text()="Furnishing"]]/span[@aria-label="Furnishing"]').text.strip()
+                except:
+                    furnishing = None
+
+                # Reactivated Date
+                try:
+                    reactivated_date = driver.find_element(By.XPATH, '//li[span[text()="Added on"]]/span[@aria-label="Reactivated date"]').text.strip()
+                except:
+                    reactivated_date = None
+
+                # Agency Name
+                try:
+                    agency_elem = driver.find_element(By.CSS_SELECTOR, 'span[aria-label="Agency name"]')
+                    agency_name = agency_elem.text.strip()
+                except:
+                    agency_name = None
+
+                # Agent Name
+                try:
+                    agent_elem = driver.find_element(By.CSS_SELECTOR, 'span[aria-label="Agent name"]')
+                    agent_name = agent_elem.text.strip()
+                except:
+                    agent_name = None
 
             except Exception as e:
-                print(f"⚠️ Extra info not found for {data['URL']}: {e}")
+                print(f"⚠️ Details not found for {data['URL']}: {e}")
 
             driver.close()
             driver.switch_to.window(original_window)
@@ -204,11 +219,14 @@ def scrape_listings_from_cards(driver):
         data["Deed Location"] = location_deed
         data["Furnishing"] = furnishing
         data["Reactivated Date"] = reactivated_date
+        data["Agency Name"] = agency_name
+        data["Agent Name"] = agent_name
 
         print(f"[{idx+1}] ✅ Collected:", data)
         data_list.append(data)
 
     return data_list
+
 
 
 # === Main Execution ===
