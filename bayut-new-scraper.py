@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
 
 # === Setup ChromeOptions ===
 def create_driver():
@@ -173,6 +174,12 @@ def scrape_details_page(driver, url):
         pass
 
     data["Amenities"] = ", ".join(amenities)
+
+    # === Phone Number Extraction ===
+        # === Phone Number Extraction ===
+    
+
+
     print(data)
     return data
 
