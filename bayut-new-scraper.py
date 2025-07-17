@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
+from selenium.common.exceptions import TimeoutException
 
 # === Setup ChromeOptions ===
 def create_driver():
@@ -31,7 +32,7 @@ def login(driver, email, password):
         login_btn.click()
         time.sleep(2)
     except Exception as e:
-        print("❌ Failed to click Login button:", e)
+        print("❌ Login button click failed:", e)
         return False
 
     try:
@@ -41,7 +42,7 @@ def login(driver, email, password):
         login_with_email.click()
         time.sleep(2)
     except Exception as e:
-        print("❌ Failed to click 'Login with Email':", e)
+        print("❌ Login with email click failed:", e)
         return False
 
     try:
@@ -59,12 +60,30 @@ def login(driver, email, password):
     try:
         final_login_btn = driver.find_element(By.CSS_SELECTOR, 'button._91e21052')
         final_login_btn.click()
-        print("✅ Login submitted. Waiting for redirect...")
-        WebDriverWait(driver, 10).until(EC.url_contains("bayut.sa/en"))
-        return True
+        print("✅ Login form submitted.")
     except Exception as e:
-        print("❌ Failed to click final login:", e)
+        print("❌ Final login button click failed:", e)
         return False
+
+    # ✅ Wait for either user account OR disappearance of Login button
+    try:
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.XPATH, '//button[contains(text(), "LivedIn")]'))
+        )
+        print("✅ Logged in - found account button.")
+        return True
+    except TimeoutException:
+        try:
+            # Check if "Login" button disappeared
+            WebDriverWait(driver, 5).until_not(
+                EC.presence_of_element_located((By.XPATH, '//button[@aria-label="Login"]'))
+            )
+            print("✅ Logged in - login button disappeared.")
+            return True
+        except TimeoutException:
+            driver.save_screenshot("login_check_failed.png")
+            print("❌ Login failed - still sees login button. Screenshot saved.")
+            return False
 
 # === Scroll and URL Collection ===
 def scroll_to_bottom_incrementally(driver):
