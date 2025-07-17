@@ -100,15 +100,18 @@ def scrape_listings_from_cards(driver):
     data_list = []
     cards = driver.find_elements(By.CSS_SELECTOR, 'article')
 
-    for card in cards:
+    for idx, card in enumerate(cards):
         data = {}
+
         try:
             link_elem = card.find_element(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
             data["URL"] = link_elem.get_attribute("href")
             data["Title"] = link_elem.get_attribute("aria-label").strip()
+            data["Listing Title"] = link_elem.get_attribute("title")  # from card HTML
         except:
             data["URL"] = None
             data["Title"] = None
+            data["Listing Title"] = None
 
         try:
             data["Price"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Price"]').text.strip()
@@ -130,12 +133,8 @@ def scrape_listings_from_cards(driver):
         except:
             data["Area"] = None
 
-        try:
-            data["Location"] = card.find_element(By.CSS_SELECTOR, 'div._1f0f1758').text.strip()
-        except:
-            data["Location"] = None
 
-        # Extract Phone Number
+        # 🔍 Phone number extraction
         phone = None
         try:
             call_button = card.find_element(By.CSS_SELECTOR, 'button[aria-label="Call"]')
@@ -161,10 +160,36 @@ def scrape_listings_from_cards(driver):
             print("⚠️ Phone not found:", e)
 
         data["Phone"] = phone
-        print(data)
+
+        # 🔍 Visit individual listing for "Location Description as per Deed"
+        location_deed = None
+        if data["URL"]:
+            original_window = driver.current_window_handle
+            driver.execute_script("window.open(arguments[0]);", data["URL"])
+            driver.switch_to.window(driver.window_handles[-1])
+
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'span._5746987e'))
+                )
+                label_elements = driver.find_elements(By.CSS_SELECTOR, 'span._3a13c305')
+                for label in label_elements:
+                    if "Location Description as per Deed:" in label.text:
+                        deed_elem = label.find_element(By.CSS_SELECTOR, 'span._78a722b5')
+                        location_deed = deed_elem.text.strip()
+                        break
+            except Exception as e:
+                print(f"⚠️ Deed location not found for {data['URL']}: {e}")
+
+            driver.close()
+            driver.switch_to.window(original_window)
+
+        data["Deed Location"] = location_deed
+        print(f"[{idx+1}] ✅ Collected:", data)
         data_list.append(data)
 
     return data_list
+
 
 # === Main Execution ===
 EMAIL = 'support@livedin.co'
