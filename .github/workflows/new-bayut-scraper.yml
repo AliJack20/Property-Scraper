@@ -53,11 +53,3 @@ jobs:
         with:
           name: bayut-scrape-results
           path: bayut_final_properties.xlsx
-
-      - name: 💾 Commit and push XLSX to repo
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add bayut_final_properties.xlsx
-          git commit -m "📊 Update Bayut data [CI]" || echo "No changes to commit"
-          git push
