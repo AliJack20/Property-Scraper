@@ -22,18 +22,51 @@ def create_driver():
             fix_hairline=True)
     return driver
 
-# === Collect all property URLs ===
-driver = create_driver()
+# === Login Function ===
+def login(driver, email, password):
+    try:
+        login_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@aria-label="Login"]'))
+        )
+        login_btn.click()
+        time.sleep(2)
+    except Exception as e:
+        print("❌ Failed to click Login button:", e)
+        return False
 
-def scrape_current_page(driver):
-    links = driver.find_elements(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
-    urls = []
-    for link in links:
-        href = link.get_attribute("href")
-        if href not in urls:
-            urls.append(href)
-    return urls
+    try:
+        login_with_email = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@aria-label="Login with Email"]'))
+        )
+        login_with_email.click()
+        time.sleep(2)
+    except Exception as e:
+        print("❌ Failed to click 'Login with Email':", e)
+        return False
 
+    try:
+        email_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="email"]'))
+        )
+        password_input = driver.find_element(By.CSS_SELECTOR, 'input[type="password"]')
+        email_input.send_keys(email)
+        password_input.send_keys(password)
+        time.sleep(1)
+    except Exception as e:
+        print("❌ Failed to input credentials:", e)
+        return False
+
+    try:
+        final_login_btn = driver.find_element(By.CSS_SELECTOR, 'button._91e21052')
+        final_login_btn.click()
+        print("✅ Login submitted. Waiting for redirect...")
+        WebDriverWait(driver, 10).until(EC.url_contains("bayut.sa/en"))
+        return True
+    except Exception as e:
+        print("❌ Failed to click final login:", e)
+        return False
+
+# === Scroll and URL Collection ===
 def scroll_to_bottom_incrementally(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
@@ -44,34 +77,20 @@ def scroll_to_bottom_incrementally(driver):
             break
         last_height = new_height
 
-base_url = "https://www.bayut.sa/en/to-rent/2,3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
-num_pages = 1 # big number
+def scrape_current_page(driver):
+    links = driver.find_elements(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
+    urls = []
+    for link in links:
+        href = link.get_attribute("href")
+        if href not in urls:
+            urls.append(href)
+    return urls
 
-url_list = []
-for page in range(1, num_pages + 1):
-    if page == 1:
-        url = base_url
-    else:
-        url = f"{base_url}&page={page}"
-    print(f"Scraping: {url}")
+# === Scrape Individual Listing ===
+def scrape_details_page(driver, url):
+    print(f"🧪 Using shared driver session on: {url}")
     driver.get(url)
-    time.sleep(3)
-    scroll_to_bottom_incrementally(driver)
-    page_urls = scrape_current_page(driver)
-    print(f"Found {len(page_urls)} on page {page}")
-    url_list.extend(page_urls)
-
-driver.quit()
-
-print(f"✅ Total listings collected: {len(url_list)}")
-
-# === NEW: For each details page, use a fresh driver ===
-
-def scrape_details_page(url):
-    driver = create_driver()
-    driver.get(url)
-    time.sleep(3)
-
+    time.sleep(2)
     data = {"URL": url}
 
     try:
@@ -106,6 +125,7 @@ def scrape_details_page(url):
     except:
         data["Area"] = None
 
+    # === Amenities Extraction ===
     amenities = []
     try:
         visible_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._117b341a')
@@ -134,22 +154,47 @@ def scrape_details_page(url):
         pass
 
     data["Amenities"] = ", ".join(amenities)
-
     print(data)
-    driver.quit()
     return data
 
-# === Loop through all listings ===
+# === Main Execution ===
+EMAIL = 'support@livedin.co'
+PASSWORD = 'Livedin2025!'
+
+base_url = "https://www.bayut.sa/en/to-rent/2,3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
+
+# === Create Driver Once ===
+driver = create_driver()
+driver.get(base_url)
+
+# === Login Once ===
+if not login(driver, EMAIL, PASSWORD):
+    print("❌ Login failed. Exiting.")
+    driver.quit()
+    exit()
+
+# === Get Listing URLs ===
+num_pages = 1
+url_list = []
+for page in range(1, num_pages + 1):
+    url = base_url if page == 1 else f"{base_url}&page={page}"
+    print(f"🔎 Scraping: {url}")
+    driver.get(url)
+    time.sleep(3)
+    scroll_to_bottom_incrementally(driver)
+    page_urls = scrape_current_page(driver)
+    print(f"✅ Found {len(page_urls)} on page {page}")
+    url_list.extend(page_urls)
+
+# === Scrape Details in SAME Session ===
 scraped_data = []
 for idx, url in enumerate(url_list):
-    print(f"Scraping detail ({idx + 1}/{len(url_list)})")
-    details = scrape_details_page(url)
+    print(f"🔍 Scraping detail ({idx + 1}/{len(url_list)})")
+    details = scrape_details_page(driver, url)
     scraped_data.append(details)
 
+# === Save and Close ===
+driver.quit()
 df = pd.DataFrame(scraped_data)
 df.to_excel("bayut_final_properties.xlsx", index=False)
 print("✅ Saved all data!")
-
-#EMAIL = 'support@livedin.co'
-#PASSWORD = 'Livedin2025!'
-# base_url = "https://www.bayut.sa/en/to-rent/3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
