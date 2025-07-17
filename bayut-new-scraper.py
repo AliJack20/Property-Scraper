@@ -3,10 +3,10 @@ from selenium_stealth import stealth
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 import time
 import pandas as pd
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.support import expected_conditions as EC
 
 # === Setup ChromeOptions ===
 def create_driver():
@@ -66,7 +66,6 @@ def login(driver, email, password):
         print("❌ Final login button click failed:", e)
         return False
 
-    # ✅ Wait for either user account OR disappearance of Login button
     try:
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.XPATH, '//button[contains(text(), "LivedIn")]'))
@@ -75,7 +74,6 @@ def login(driver, email, password):
         return True
     except TimeoutException:
         try:
-            # Check if "Login" button disappeared
             WebDriverWait(driver, 5).until_not(
                 EC.presence_of_element_located((By.XPATH, '//button[@aria-label="Login"]'))
             )
@@ -86,7 +84,7 @@ def login(driver, email, password):
             print("❌ Login failed - still sees login button. Screenshot saved.")
             return False
 
-# === Scroll and URL Collection ===
+# === Scroll helper ===
 def scroll_to_bottom_incrementally(driver):
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
@@ -97,130 +95,103 @@ def scroll_to_bottom_incrementally(driver):
             break
         last_height = new_height
 
-def scrape_current_page(driver):
-    links = driver.find_elements(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
-    urls = []
-    for link in links:
-        href = link.get_attribute("href")
-        if href not in urls:
-            urls.append(href)
-    return urls
+# === Scrape listings directly from cards ===
+def scrape_listings_from_cards(driver):
+    data_list = []
+    cards = driver.find_elements(By.CSS_SELECTOR, 'article')
 
-# === Scrape Individual Listing ===
-def scrape_details_page(driver, url):
-    print(f"🧪 Using shared driver session on: {url}")
-    driver.get(url)
-    time.sleep(2)
-    data = {"URL": url}
+    for card in cards:
+        data = {}
+        try:
+            link_elem = card.find_element(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
+            data["URL"] = link_elem.get_attribute("href")
+            data["Title"] = link_elem.get_attribute("aria-label").strip()
+        except:
+            data["URL"] = None
+            data["Title"] = None
 
-    try:
-        title_elem = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'h1'))
-        )
-        data["Title"] = title_elem.text.strip()
-    except:
-        data["Title"] = None
+        try:
+            data["Price"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Price"]').text.strip()
+        except:
+            data["Price"] = None
 
-    try:
-        price_elem = driver.find_element(By.CSS_SELECTOR, '[aria-label="Price"]')
-        data["Price"] = price_elem.text.strip()
-    except:
-        data["Price"] = None
+        try:
+            data["Beds"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Beds"]').text.strip()
+        except:
+            data["Beds"] = None
 
-    try:
-        beds_elem = driver.find_element(By.CSS_SELECTOR, '[aria-label="Beds"]')
-        data["Beds"] = beds_elem.text.strip()
-    except:
-        data["Beds"] = None
+        try:
+            data["Baths"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Baths"]').text.strip()
+        except:
+            data["Baths"] = None
 
-    try:
-        baths_elem = driver.find_element(By.CSS_SELECTOR, '[aria-label="Baths"]')
-        data["Baths"] = baths_elem.text.strip()
-    except:
-        data["Baths"] = None
+        try:
+            data["Area"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Area"]').text.strip()
+        except:
+            data["Area"] = None
 
-    try:
-        size_elem = driver.find_element(By.CSS_SELECTOR, '[aria-label="Area"]')
-        data["Area"] = size_elem.text.strip()
-    except:
-        data["Area"] = None
+        try:
+            data["Location"] = card.find_element(By.CSS_SELECTOR, 'div._1f0f1758').text.strip()
+        except:
+            data["Location"] = None
 
-    # === Amenities Extraction ===
-    amenities = []
-    try:
-        visible_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._117b341a')
-        for block in visible_blocks:
-            spans = block.find_elements(By.CSS_SELECTOR, 'span._7181e5ac')
-            for span in spans:
-                text = span.text.strip()
-                if text and text not in amenities:
-                    amenities.append(text)
-    except:
-        pass
+        # Extract Phone Number
+        phone = None
+        try:
+            call_button = card.find_element(By.CSS_SELECTOR, 'button[aria-label="Call"]')
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", call_button)
+            time.sleep(0.5)
+            ActionChains(driver).move_to_element(call_button).pause(0.3).click(call_button).perform()
 
-    try:
-        more_button = driver.find_element(By.CSS_SELECTOR, 'div._6e45c68c[aria-label*="More amenities"]')
-        if more_button.is_displayed():
-            driver.execute_script("arguments[0].click();", more_button)
             WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, '#property-amenity-dialog'))
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href^="tel:"]'))
             )
-            modal_spans = driver.find_elements(By.CSS_SELECTOR, '#property-amenity-dialog span._7181e5ac')
-            for span in modal_spans:
-                text = span.text.strip()
-                if text and text not in amenities:
-                    amenities.append(text)
-    except:
-        pass
+            tel_elem = driver.find_element(By.CSS_SELECTOR, 'a[href^="tel:"]')
+            phone = tel_elem.get_attribute("href").replace("tel:", "").strip()
 
-    data["Amenities"] = ", ".join(amenities)
+            # Close modal
+            try:
+                close_btn = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Close button"]')
+                driver.execute_script("arguments[0].click();", close_btn)
+                time.sleep(0.3)
+            except:
+                pass
 
-    # === Phone Number Extraction ===
-        # === Phone Number Extraction ===
-    
+        except Exception as e:
+            print("⚠️ Phone not found:", e)
 
+        data["Phone"] = phone
+        print(data)
+        data_list.append(data)
 
-    print(data)
-    return data
+    return data_list
 
 # === Main Execution ===
 EMAIL = 'support@livedin.co'
 PASSWORD = 'Livedin2025!'
-
 base_url = "https://www.bayut.sa/en/to-rent/2,3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
 
-# === Create Driver Once ===
 driver = create_driver()
 driver.get(base_url)
 
-# === Login Once ===
 if not login(driver, EMAIL, PASSWORD):
     print("❌ Login failed. Exiting.")
     driver.quit()
     exit()
 
-# === Get Listing URLs ===
+# === Scrape paginated results ===
+all_data = []
 num_pages = 1
-url_list = []
 for page in range(1, num_pages + 1):
     url = base_url if page == 1 else f"{base_url}&page={page}"
-    print(f"🔎 Scraping: {url}")
+    print(f"\n📄 Scraping page {page}: {url}")
     driver.get(url)
     time.sleep(3)
     scroll_to_bottom_incrementally(driver)
-    page_urls = scrape_current_page(driver)
-    print(f"✅ Found {len(page_urls)} on page {page}")
-    url_list.extend(page_urls)
+    listings = scrape_listings_from_cards(driver)
+    all_data.extend(listings)
 
-# === Scrape Details in SAME Session ===
-scraped_data = []
-for idx, url in enumerate(url_list):
-    print(f"🔍 Scraping detail ({idx + 1}/{len(url_list)})")
-    details = scrape_details_page(driver, url)
-    scraped_data.append(details)
-
-# === Save and Close ===
 driver.quit()
-df = pd.DataFrame(scraped_data)
-df.to_excel("bayut_final_properties.xlsx", index=False)
-print("✅ Saved all data!")
+df = pd.DataFrame(all_data)
+df.to_excel("bayut_card_data_final.xlsx", index=False)
+print("✅ Saved to bayut_card_data_final.xlsx")
