@@ -46,7 +46,7 @@ jobs:
         run: |
           sudo apt-get install -y xvfb
           Xvfb :99 -ac &  # Virtual display for headless Chrome
-          python bayuth-scraper.py <<< "1"  # Replace 1 with desired number of pages
+          python bayut-new-scraper.py <<< "1"  # Replace 1 with desired number of pages
 
       - name: 📦 Upload XLSX output
         uses: actions/upload-artifact@v4
