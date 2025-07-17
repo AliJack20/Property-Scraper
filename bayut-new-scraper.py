@@ -107,7 +107,7 @@ def scrape_listings_from_cards(driver):
             link_elem = card.find_element(By.CSS_SELECTOR, 'a[aria-label][href*="/property/"]')
             data["URL"] = link_elem.get_attribute("href")
             data["Title"] = link_elem.get_attribute("aria-label").strip()
-            data["Listing Title"] = link_elem.get_attribute("title")  # from card HTML
+            data["Listing Title"] = link_elem.get_attribute("title")
         except:
             data["URL"] = None
             data["Title"] = None
@@ -133,7 +133,6 @@ def scrape_listings_from_cards(driver):
         except:
             data["Area"] = None
 
-
         # 🔍 Phone number extraction
         phone = None
         try:
@@ -148,7 +147,6 @@ def scrape_listings_from_cards(driver):
             tel_elem = driver.find_element(By.CSS_SELECTOR, 'a[href^="tel:"]')
             phone = tel_elem.get_attribute("href").replace("tel:", "").strip()
 
-            # Close modal
             try:
                 close_btn = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Close button"]')
                 driver.execute_script("arguments[0].click();", close_btn)
@@ -161,8 +159,11 @@ def scrape_listings_from_cards(driver):
 
         data["Phone"] = phone
 
-        # 🔍 Visit individual listing for "Location Description as per Deed"
+        # 🔍 Visit individual listing for extra details
         location_deed = None
+        furnishing = None
+        reactivated_date = None
+
         if data["URL"]:
             original_window = driver.current_window_handle
             driver.execute_script("window.open(arguments[0]);", data["URL"])
@@ -172,19 +173,38 @@ def scrape_listings_from_cards(driver):
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, 'span._5746987e'))
                 )
+
+                # Location Description as per Deed
                 label_elements = driver.find_elements(By.CSS_SELECTOR, 'span._3a13c305')
                 for label in label_elements:
                     if "Location Description as per Deed:" in label.text:
                         deed_elem = label.find_element(By.CSS_SELECTOR, 'span._78a722b5')
                         location_deed = deed_elem.text.strip()
                         break
+
+                # Furnishing & Reactivated Date
+                details = driver.find_elements(By.CSS_SELECTOR, 'ul[aria-label="Property details"] li')
+                for item in details:
+                    try:
+                        label = item.find_element(By.CSS_SELECTOR, 'span.ed0db22a').text.strip()
+                        value = item.find_element(By.CSS_SELECTOR, 'span._2fdf7fc5').text.strip()
+                        if label == "Furnishing":
+                            furnishing = value
+                        elif label == "Added on":
+                            reactivated_date = value
+                    except:
+                        continue
+
             except Exception as e:
-                print(f"⚠️ Deed location not found for {data['URL']}: {e}")
+                print(f"⚠️ Extra info not found for {data['URL']}: {e}")
 
             driver.close()
             driver.switch_to.window(original_window)
 
         data["Deed Location"] = location_deed
+        data["Furnishing"] = furnishing
+        data["Reactivated Date"] = reactivated_date
+
         print(f"[{idx+1}] ✅ Collected:", data)
         data_list.append(data)
 
@@ -206,7 +226,7 @@ if not login(driver, EMAIL, PASSWORD):
 
 # === Scrape paginated results ===
 all_data = []
-num_pages = 3
+num_pages = 1
 for page in range(1, num_pages + 1):
     url = base_url if page == 1 else f"{base_url}&page={page}"
     print(f"\n📄 Scraping page {page}: {url}")
