@@ -150,6 +150,4 @@ df = pd.DataFrame(scraped_data)
 df.to_excel("bayut_final_properties.xlsx", index=False)
 print("✅ Saved all data!")
 
-#EMAIL = 'support@livedin.co'
-#PASSWORD = 'Livedin2025!'
 # base_url = "https://www.bayut.sa/en/to-rent/3-bedroom-properties/riyadh/north-riyadh/al-narjis/?rent_frequency=yearly&sort=price_desc&furnishing_status=unfurnished"
