@@ -10,11 +10,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 import undetected_chromedriver as uc
 
-# ------------------ CONFIG ------------------
+
 BASE_URL = "https://sa.aqar.fm/شقق-للإيجار/الرياض/شمال-الرياض/حي-النرجس?rent_period=eq,3&beds=eq,2"
 PAGES_TO_SCRAPE = 1
 OUTPUT_CSV = "aqar_listings_final.csv"
-# --------------------------------------------
+
 
 options = uc.ChromeOptions()
 options.add_argument("--start-maximized")
