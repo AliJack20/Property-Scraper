@@ -118,8 +118,8 @@ def scrape_details_page(url):
         host_info_list = [info.strip() for info in host_info]
 
         # --- NEW: Amenities logic ---
-        amenities = []
-
+        
+        
        
 
         # --- NEW: Property details ---
