@@ -58,14 +58,19 @@ def scrape_details_page(url):
 
         title = re.search(r'<h1[^>]*>([^<]+)</h1>', html)
         # Improved price extraction logic
-        # Price extraction using Selenium (more reliable than regex)
         try:
-            price_element = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'span[class*="a8jt5op"]'))
+            # Wait for any span that looks like a price and contains a dollar sign
+            price_elements = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.XPATH, '//span[contains(text(), "$")]'))
             )
-            price_text = price_element.text.strip()
-        except:
+            # Filter for the shortest non-empty price-like value (likely the discounted price)
+            price_texts = [elem.text.strip() for elem in price_elements if "$" in elem.text.strip()]
+            price_texts = [p for p in price_texts if re.match(r"\$\d+", p)]
+            price_text = min(price_texts, key=len) if price_texts else None
+        except Exception as e:
+            print(f"⚠️ Failed to get price for {url}: {e}")
             price_text = None
+
 
         address = re.search(r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>', html)
         guest = re.search(r'<li class="l7n4lsf[^>]+>([^<]+)<span', html)
@@ -123,7 +128,7 @@ def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
     print(f"✅ Data saved to {filename}")
 
 # Start scraping
-base_url = "https://www.airbnb.com/s/Al-Narjis--Riyadh-Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01"
+base_url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&location_bb=QcvOU0I9qT5Bwa9%2BQjkUzg%3D%3D&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click"
 driver.get(base_url)
 
 WebDriverWait(driver, 20).until(
