@@ -57,15 +57,32 @@ def scrape_details_page(url):
         html = driver.page_source
 
         title = re.search(r'<h1[^>]*>([^<]+)</h1>', html)
-        price_match = re.search(r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)', html)
+        # Improved price extraction logic
+        # Price extraction using Selenium (more reliable than regex)
+        try:
+            price_element = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'span[class*="a8jt5op"]'))
+            )
+            price_text = price_element.text.strip()
+        except:
+            price_text = None
+
         address = re.search(r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>', html)
         guest = re.search(r'<li class="l7n4lsf[^>]+>([^<]+)<span', html)
         reviews_match = re.search(r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>', html)
         host_name = re.search(r't1gpcl1t[^>]+>([^<]+)</div>', html)
         host_info = re.findall(r'd1u64sg5[^"]+atm_67_1vlbu9m[^>]*><div><span[^>]*>([^<]+)', html)
 
-        bed_bath = re.findall(r'<li[^>]*class="l7n4lsf[^"]*"[^>]*>\s*(\d+)\s*(bedroom|bed|bath)', html)
-        bed_bath_details = [f"{number} {label}" for number, label in bed_bath]
+        # Extract all <li> elements with that class
+        bed_bath_lis = re.findall(r'<li[^>]*class="l7n4lsf[^"]*"[^>]*>(.*?)</li>', html, re.DOTALL)
+        bed_bath_details = []
+
+        for item in bed_bath_lis:
+            text = re.sub(r'<[^>]+>', '', item)  # Strip HTML tags
+            text = text.replace("·", "").strip()
+            if any(x in text.lower() for x in ["bed", "bath", "bedroom"]):
+                bed_bath_details.append(text)
+
 
         amenities = []
         try:
@@ -84,7 +101,7 @@ def scrape_details_page(url):
         return {
             "URL": url,
             "Title": title.group(1) if title else None,
-            "Price (5 Nights)": f"${price_match.group(1)}" if price_match else None,
+            "Price (5 Nights)": price_text,
             "Address": address.group(1) if address else None,
             "Guest": guest.group(1) if guest else None,
             "Bed_Bath_Details": bed_bath_details,
@@ -121,6 +138,7 @@ scraped_data = []
 for i, link in enumerate(url_list):
     print(f"🔎 Scraping {i+1}/{len(url_list)}: {link}")
     result = scrape_details_page(link)
+    print(f"[{link}] Scraped Data: {result}") 
     if result:
         scraped_data.append(result)
 
