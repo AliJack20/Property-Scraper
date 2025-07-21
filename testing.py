@@ -13,17 +13,14 @@ BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC
 PAGES_TO_SCRAPE = 1
 OUTPUT_CSV = "aqar_listings_final.csv"
 
-# One shared Service object for both drivers
 shared_service = Service()
 
-# Chrome options must be separate objects
 options_main = uc.ChromeOptions()
 options_main.add_argument("--start-maximized")
 
 options_detail = uc.ChromeOptions()
 options_detail.add_argument("--start-maximized")
 
-# Launch both drivers
 driver = uc.Chrome(service=shared_service, options=options_main)
 detail_driver = uc.Chrome(service=shared_service, options=options_detail)
 
@@ -40,28 +37,57 @@ def build_page_url(base_url, page_number):
     new_path = '/'.join(segments)
     return urlunparse(parsed._replace(path=new_path))
 
+def click_translate_popup(driver):
+    try:
+        time.sleep(1)
+        for iframe in driver.find_elements(By.TAG_NAME, "iframe"):
+            try:
+                driver.switch_to.frame(iframe)
+                button = driver.find_element(By.XPATH, "//button[contains(text(), 'English')]")
+                button.click()
+                print("🌍 Clicked 'English' on Google Translate popup.")
+                time.sleep(1)
+                break
+            except:
+                driver.switch_to.default_content()
+        driver.switch_to.default_content()
+    except Exception as e:
+        print(f"⚠️ Could not handle translate popup: {e}")
+
+
 def extract_features_from_detail_page(url):
     try:
         detail_driver.get(url)
-        time.sleep(2)
+        click_translate_popup(detail_driver)
+        time.sleep(2)  # Allow page and translation to fully load
 
-        # Wait for features container
-        features_container = WebDriverWait(detail_driver, 5).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "_newSpecCard__hWWBI"))
-        )
-        feature_divs = features_container.find_elements(By.CLASS_NAME, "_label___qjLO")
-        features = [f.text.strip() for f in feature_divs if f.text.strip()]
+        # Find all elements matching the feature box
+        feature_divs = detail_driver.find_elements(By.CLASS_NAME, "_label___qjLO")
+
+        features = []
+        for div in feature_divs:
+            try:
+                # Get the full visible text of the feature
+                text = div.text.strip()
+                if text:
+                    features.append(text)
+            except:
+                continue
+
         return "; ".join(features)
+    
     except Exception as e:
         print(f"❌ Failed to extract features from {url}: {e}")
         return ""
+
 
 try:
     for page in range(1, PAGES_TO_SCRAPE + 1):
         full_url = build_page_url(BASE_URL, page)
         print(f"\n🌐 Visiting page: {full_url}")
         driver.get(full_url)
-        time.sleep(5)
+        click_translate_popup(driver)
+        time.sleep(3)
 
         cards = driver.find_elements(By.CLASS_NAME, "_listingCard__PoR_B")
         if not cards:
@@ -114,11 +140,11 @@ finally:
         driver.quit()
         detail_driver.quit()
 
-# Save to CSV
-with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
+with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8-sig") as file:
     writer = csv.DictWriter(file, fieldnames=["URL", "Price", "Area", "Bedrooms", "Bathrooms", "Features"])
     writer.writeheader()
     for listing in all_listings:
         writer.writerow(listing)
+
 
 print(f"\n✅ Scraping complete. {len(all_listings)} listings saved to {OUTPUT_CSV}")
