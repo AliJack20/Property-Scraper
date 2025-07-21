@@ -13,16 +13,15 @@ BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC
 PAGES_TO_SCRAPE = 1
 OUTPUT_CSV = "aqar_listings_final.csv"
 
-shared_service = Service()
-
 options_main = uc.ChromeOptions()
 options_main.add_argument("--start-maximized")
 
 options_detail = uc.ChromeOptions()
 options_detail.add_argument("--start-maximized")
 
-driver = uc.Chrome(service=shared_service, options=options_main)
-detail_driver = uc.Chrome(service=shared_service, options=options_detail)
+driver = uc.Chrome(options=options_main)
+detail_driver = uc.Chrome(options=options_detail)
+
 
 all_listings = []
 
@@ -55,30 +54,24 @@ def click_translate_popup(driver):
         print(f"⚠️ Could not handle translate popup: {e}")
 
 
-def extract_features_from_detail_page(url):
+def extract_features_from_detail_page(driver, url):
+    driver.get(url)
+    time.sleep(2)  # Wait for page to load (adjust as needed)
+
+    features = []
     try:
-        detail_driver.get(url)
-        click_translate_popup(detail_driver)
-        time.sleep(2)  # Allow page and translation to fully load
-
-        # Find all elements matching the feature box
-        feature_divs = detail_driver.find_elements(By.CLASS_NAME, "_label___qjLO")
-
-        features = []
-        for div in feature_divs:
+        labels = driver.find_elements(By.CLASS_NAME, "_label___qjLO")
+        for label in labels:
             try:
-                # Get the full visible text of the feature
-                text = div.text.strip()
-                if text:
-                    features.append(text)
-            except:
+                # Only include labels that contain the checkmark icon
+                if "checkmark.svg" in label.get_attribute("innerHTML"):
+                    features.append(label.text.strip())
+            except Exception:
                 continue
-
-        return "; ".join(features)
-    
     except Exception as e:
-        print(f"❌ Failed to extract features from {url}: {e}")
-        return ""
+        print(f"Error extracting features: {e}")
+    return features
+
 
 
 try:
@@ -123,7 +116,7 @@ try:
             except:
                 area, beds, baths = "", "", ""
 
-            features = extract_features_from_detail_page(url)
+            features = extract_features_from_detail_page(detail_driver, url)
             print(f"✅ {price} SAR | {beds}BR | {baths}BA | {area} sqm | Features: {features}")
 
             all_listings.append({
