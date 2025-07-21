@@ -58,18 +58,13 @@ def scrape_details_page(url):
 
         title = re.search(r'<h1[^>]*>([^<]+)</h1>', html)
         # Improved price extraction logic
-        try:
-            # Wait for any span that looks like a price and contains a dollar sign
-            price_elements = WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.XPATH, '//span[contains(text(), "$")]'))
-            )
-            # Filter for the shortest non-empty price-like value (likely the discounted price)
-            price_texts = [elem.text.strip() for elem in price_elements if "$" in elem.text.strip()]
-            price_texts = [p for p in price_texts if re.match(r"\$\d+", p)]
-            price_text = min(price_texts, key=len) if price_texts else None
-        except Exception as e:
-            print(f"⚠️ Failed to get price for {url}: {e}")
-            price_text = None
+        price_pattern = r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)'
+        price_match = re.search(price_pattern, html)
+
+        if price_match:
+            price = f"${price_match.group(1)}"
+        else:
+            price = None
 
 
         address = re.search(r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>', html)
@@ -106,7 +101,7 @@ def scrape_details_page(url):
         return {
             "URL": url,
             "Title": title.group(1) if title else None,
-            "Price (5 Nights)": price_text,
+            "Price (5 Nights)": price,
             "Address": address.group(1) if address else None,
             "Guest": guest.group(1) if guest else None,
             "Bed_Bath_Details": bed_bath_details,
@@ -128,7 +123,7 @@ def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
     print(f"✅ Data saved to {filename}")
 
 # Start scraping
-base_url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&location_bb=QcvOU0I9qT5Bwa9%2BQjkUzg%3D%3D&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click"
+base_url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=unknown&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&search_mode=regular_search&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&checkin=2025-07-21&checkout=2025-07-25"
 driver.get(base_url)
 
 WebDriverWait(driver, 20).until(

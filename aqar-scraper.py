@@ -10,7 +10,7 @@ import undetected_chromedriver as uc
 
 
 BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%AD%D9%8A-%D8%A7%D9%84%D9%86%D8%B1%D8%AC%D8%B3?rent_period=eq,3&beds=eq,2"
-PAGES_TO_SCRAPE = 11
+PAGES_TO_SCRAPE = 1
 OUTPUT_CSV = "aqar_listings_final.csv"
 
 
