@@ -3,9 +3,8 @@ import re
 import time
 import contextlib
 from urllib.parse import urlparse, urlunparse
-from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -13,13 +12,14 @@ BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC
 PAGES_TO_SCRAPE = 19
 OUTPUT_CSV = "aqar_listings_final.csv"
 
-options_main = webdriver.ChromeOptions()
+options_main = uc.ChromeOptions()
 options_main.add_argument("--start-maximized")
-options_detail = webdriver.ChromeOptions()
+
+options_detail = uc.ChromeOptions()
 options_detail.add_argument("--start-maximized")
 
-driver = webdriver.Chrome(options=options_main)
-detail_driver = webdriver.Chrome(options=options_detail)
+driver = uc.Chrome(options=options_main)
+detail_driver = uc.Chrome(options=options_detail)
 
 all_listings = []
 
