@@ -9,7 +9,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D8%B4%D9%85%D8%A7%D9%84-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6?rent_period=eq,3"
+BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D9%88%D8%B3%D8%B7-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6?rent_period=eq,3"
+PAGES_TO_SCRAPE = 19
 OUTPUT_CSV = "aqar_listings_final.csv"
 
 options_main = uc.ChromeOptions()
@@ -85,8 +86,7 @@ def extract_features_from_detail_page(driver, url):
     return features
 
 try:
-    page = 1
-    while True:
+    for page in range(1, PAGES_TO_SCRAPE + 1):
         full_url = build_page_url(BASE_URL, page)
         print(f"\n🌐 Visiting page: {full_url}")
         driver.get(full_url)
@@ -95,8 +95,8 @@ try:
 
         cards = driver.find_elements(By.CLASS_NAME, "_listingCard__PoR_B")
         if not cards:
-            print(f"❌ No listings found on page {page}. Stopping.")
-            break
+            print(f"❌ No listings found on page {page}")
+            continue
 
         for card in cards:
             try:
@@ -145,8 +145,6 @@ try:
                 "Bathrooms": baths,
                 "Features": ", ".join(features)
             })
-
-        page += 1  # Move to next page
 
 finally:
     with contextlib.suppress(Exception):
