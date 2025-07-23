@@ -13,10 +13,12 @@ PAGES_TO_SCRAPE = 19
 OUTPUT_CSV = "aqar_listings_final.csv"
 
 options_main = uc.ChromeOptions()
-options_main.add_argument("--start-maximized")
+options_main.add_argument("--headless=new")
+options_main.add_argument("--window-size=1920,1080")
 
 options_detail = uc.ChromeOptions()
-options_detail.add_argument("--start-maximized")
+options_detail.add_argument("--headless=new")
+options_detail.add_argument("--window-size=1920,1080")
 
 driver = uc.Chrome(options=options_main)
 detail_driver = uc.Chrome(options=options_detail)
