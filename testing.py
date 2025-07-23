@@ -3,23 +3,23 @@ import re
 import time
 import contextlib
 from urllib.parse import urlparse, urlunparse
-import undetected_chromedriver as uc
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/%D9%88%D8%B3%D8%B7-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6?rent_period=eq,3"
-PAGES_TO_SCRAPE = 19
 OUTPUT_CSV = "aqar_listings_final.csv"
 
-options_main = uc.ChromeOptions()
-options_main.add_argument("--start-maximized")
-options_detail = uc.ChromeOptions()
-options_detail.add_argument("--start-maximized")
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--start-maximized")
 
-driver = uc.Chrome(options=options_main)
-detail_driver = uc.Chrome(options=options_detail)
+driver = webdriver.Chrome(options=chrome_options)
+detail_driver = webdriver.Chrome(options=chrome_options)
 
 all_listings = []
 
@@ -86,7 +86,8 @@ def extract_features_from_detail_page(driver, url):
     return features
 
 try:
-    for page in range(1, PAGES_TO_SCRAPE + 1):
+    page = 1
+    while True:
         full_url = build_page_url(BASE_URL, page)
         print(f"\n🌐 Visiting page: {full_url}")
         driver.get(full_url)
@@ -95,8 +96,8 @@ try:
 
         cards = driver.find_elements(By.CLASS_NAME, "_listingCard__PoR_B")
         if not cards:
-            print(f"❌ No listings found on page {page}")
-            continue
+            print(f"❌ No listings found on page {page}, stopping.")
+            break
 
         for card in cards:
             try:
@@ -145,6 +146,8 @@ try:
                 "Bathrooms": baths,
                 "Features": ", ".join(features)
             })
+
+        page += 1
 
 finally:
     with contextlib.suppress(Exception):
