@@ -13,12 +13,10 @@ PAGES_TO_SCRAPE = 19
 OUTPUT_CSV = "aqar_listings_final.csv"
 
 options_main = uc.ChromeOptions()
-options_main.add_argument("--headless=new")
-options_main.add_argument("--window-size=1920,1080")
+options_main.add_argument("--start-maximized")
 
 options_detail = uc.ChromeOptions()
-options_detail.add_argument("--headless=new")
-options_detail.add_argument("--window-size=1920,1080")
+options_detail.add_argument("--start-maximized")
 
 driver = uc.Chrome(options=options_main)
 detail_driver = uc.Chrome(options=options_detail)
@@ -95,7 +93,7 @@ try:
         click_translate_popup(driver)
         time.sleep(5)
 
-        cards = driver.find_elements(By.CLASS_NAME, "_listingCard__PoR_B")
+        cards = driver.find_elements(By.CSS_SELECTOR, 'div[data-testid="listing-card"]')
         if not cards:
             print(f"❌ No listings found on page {page}")
             continue
