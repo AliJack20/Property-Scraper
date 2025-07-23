@@ -6,7 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import time
 import pandas as pd
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, NoSuchElementException
 
 # === Setup ChromeOptions ===
 def create_driver():
@@ -115,12 +115,13 @@ def scrape_listings_from_cards(driver):
             data["Price"] = card.find_element(By.CSS_SELECTOR, '[aria-label="Price"]').text.strip()
         except:
             data["Price"] = None
-        
+
+        # Location
         try:
-            location_elem = card.find_element(By.CSS_SELECTOR, 'div[aria-label="Location"] h3')
-            data["Location"] = location_elem.text.strip()
-        except:
-            data["Location"] = None
+            location_el = card.find_element(By.CSS_SELECTOR, 'div[aria-label="Location"] h3._4402bd70')
+            data["location"] = location_el.text.strip()
+        except NoSuchElementException:
+            data["location"] = ""
 
 
         try:
@@ -220,34 +221,50 @@ def scrape_listings_from_cards(driver):
                 except:
                     agent_name = None
                 
-                amenities = []
+                # Amenities
                 try:
-                    visible_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._117b341a')
-                    for block in visible_blocks:
-                        spans = block.find_elements(By.CSS_SELECTOR, 'span._7181e5ac')
-                        for span in spans:
-                            text = span.text.strip()
-                            if text and text not in amenities:
-                                amenities.append(text)
-                except:
-                    pass
+                    amenities = set()
 
-                try:
-                    more_button = driver.find_element(By.CSS_SELECTOR, 'div._6e45c68c[aria-label*="More amenities"]')
-                    if more_button.is_displayed():
-                        driver.execute_script("arguments[0].click();", more_button)
-                        WebDriverWait(driver, 5).until(
-                            EC.visibility_of_element_located((By.CSS_SELECTOR, '#property-amenity-dialog'))
+                    # Try to click "+ More amenities" if available
+                    try:
+                        more_amenities_btn = WebDriverWait(driver, 2).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[aria-label="More amenities"]'))
                         )
-                        modal_spans = driver.find_elements(By.CSS_SELECTOR, '#property-amenity-dialog span._7181e5ac')
-                        for span in modal_spans:
-                            text = span.text.strip()
-                            if text and text not in amenities:
-                                amenities.append(text)
-                except:
-                    pass
+                        driver.execute_script("arguments[0].click();", more_amenities_btn)
 
-                data["Amenities"] = ", ".join(amenities)
+                        # Wait for the modal to appear
+                        WebDriverWait(driver, 5).until(
+                            EC.visibility_of_element_located((By.CSS_SELECTOR, 'div#property-amenity-dialog'))
+                        )
+
+                        # Extract amenities from modal
+                        modal_amenities = driver.find_elements(By.CSS_SELECTOR, 'div#property-amenity-dialog span._7181e5ac')
+                        for el in modal_amenities:
+                            text = el.text.strip()
+                            if text:
+                                amenities.add(text)
+
+                        # Close modal
+                        try:
+                            close_btn = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Close button"]')
+                            driver.execute_script("arguments[0].click();", close_btn)
+                        except:
+                            pass
+
+                    except (TimeoutException, NoSuchElementException, ElementClickInterceptedException):
+                        # Fallback: Get visible amenities if no modal exists
+                        visible_amenities = driver.find_elements(By.CSS_SELECTOR, 'div._91c991df span._7181e5ac')
+                        for el in visible_amenities:
+                            text = el.text.strip()
+                            if text:
+                                amenities.add(text)
+
+                    data["amenities"] = ", ".join(sorted(amenities))
+
+                except Exception as e:
+                    print(f"❌ Error extracting amenities: {e}")
+                    data["amenities"] = ""
+
 
             except Exception as e:
                 print(f"⚠️ Details not found for {data['URL']}: {e}")
@@ -285,9 +302,9 @@ if not login(driver, EMAIL, PASSWORD):
 
 # === Scrape paginated results ===
 all_data = []
-num_pages = 48
+num_pages = 2
 for page in range(1, num_pages + 1):
-    url = base_url if page == 1 else f"{base_url}&page={page}"
+    url = base_url if page == 1 else f"{base_url}?page={page}"
     print(f"\n📄 Scraping page {page}: {url}")
     driver.get(url)
     time.sleep(3)
