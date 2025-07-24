@@ -46,7 +46,7 @@ jobs:
         run: |
           sudo apt-get install -y xvfb
           Xvfb :99 -ac &  # For headless display
-          python airbnb-scraper.py <<< "1"  # replace 1 with number of pages
+          python airbnb-test.py <<< "15"  # replace 1 with number of pages
 
       - name: 📦 Upload CSV output
         uses: actions/upload-artifact@v4
