@@ -84,11 +84,11 @@ def go_to_next_page():
 
 
 # ⬅️ Collect URLs & card locations
-url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&checkin=2025-08-01&checkout=2025-08-02&price_filter_num_nights=1&zoom_level=9&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&pagination_search=true&federated_search_session_id=72f3409d-d227-43dd-a6b1-b8cdd72c3725&cursor=eyJzZWN0aW9uX29mZnNldCI6MCwiaXRlbXNfb2Zmc2V0IjowLCJ2ZXJzaW9uIjoxfQ%3D%3D"
+url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=unknown&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&search_mode=regular_search&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&checkin=2025-07-21&checkout=2025-07-25"
 driver.get(url)
 time.sleep(3)
 
-num_pages = 15  # adjust as needed
+num_pages = 2  # adjust as needed
 url_list = []
 
 for page in range(num_pages):
@@ -202,7 +202,7 @@ def scrape_details_page(url, card_location):
         print(f"Error scraping {url}: {e}")
         return None
 
-def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_data_with_card_location.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"✅ Data saved to {filename}")
