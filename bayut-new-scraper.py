@@ -290,11 +290,9 @@ def scrape_listings_from_cards(driver):
 # === Main Execution ===
 EMAIL = 'support@livedin.co'
 PASSWORD = 'Livedin2025!'
-<<<<<<< HEAD
+
 base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/page-82/"
-=======
-base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/page-61/"
->>>>>>> 7a06de9d62496c4eb95e37811ae7adb802ddae2c
+
 
 driver = create_driver()
 driver.get(base_url)
