@@ -10,7 +10,6 @@ import pandas as pd
 
 options = webdriver.ChromeOptions()
 options.add_argument("start-maximized")
-# options.add_argument("--headless")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option('useAutomationExtension', False)
 driver = webdriver.Chrome(options=options)
@@ -25,22 +24,34 @@ stealth(driver,
         fix_hairline=True,
         )
 
-# Function to scrape the current page and return all property URLs
-def scrape_current_page():
-    links = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/rooms/"]')
-    urls = []
-    for link in links:
-        href = link.get_attribute("href")
-        if "/rooms/" in href and href not in urls:
-            urls.append(href)
-    return urls
+# 🔍 Extracts both URL and card location from listing cards
+def scrape_card_location_from_card_elements():
+    cards = driver.find_elements(By.CSS_SELECTOR, 'div[itemprop="itemListElement"]')
+    card_info = []
+    seen = set()
 
+    for card in cards:
+        try:
+            url = card.find_element(By.TAG_NAME, 'a').get_attribute("href")
+            location = ""
+            try:
+                location_elem = card.find_element(By.CSS_SELECTOR, 'div[class*="t1jojoys"]')
+                location = location_elem.text.strip()
+            except NoSuchElementException:
+                pass
 
-# Function to scroll to the bottom of the page
+            if url not in seen:
+                card_info.append((url, location))
+                seen.add(url)
+        except Exception as e:
+            print("Card parse error:", e)
+
+    return card_info
+
+# ⬇️ Scroll
 def scroll_to_bottom_incrementally():
     SCROLL_PAUSE_TIME = 2
     last_height = driver.execute_script("return document.body.scrollHeight")
-
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(SCROLL_PAUSE_TIME)
@@ -49,23 +60,21 @@ def scroll_to_bottom_incrementally():
             break
         last_height = new_height
 
-
-# Function to wait for the "Next" button and click it
+# ➡️ Pagination
 def go_to_next_page():
     try:
         next_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "a[aria-label='Next']"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
-        time.sleep(1)  # Let scroll settle
+        time.sleep(1)
 
-        # Close any overlay/modal if present
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
             time.sleep(1)
         except:
-            pass  # Ignore if no modal
+            pass
 
         next_button.click()
         return True
@@ -74,26 +83,25 @@ def go_to_next_page():
         return False
 
 
-# base url
-url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=unknown&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&search_mode=regular_search&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&checkin=2025-07-21&checkout=2025-07-25"
+# ⬅️ Collect URLs & card locations
+url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&checkin=2025-08-01&checkout=2025-08-02&price_filter_num_nights=1&zoom_level=9&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&pagination_search=true&federated_search_session_id=72f3409d-d227-43dd-a6b1-b8cdd72c3725&cursor=eyJzZWN0aW9uX29mZnNldCI6MCwiaXRlbXNfb2Zmc2V0IjowLCJ2ZXJzaW9uIjoxfQ%3D%3D"
 driver.get(url)
+time.sleep(3)
 
-num_pages = 1 #int(input("How many pages do you want to scrape? "))
-
+num_pages = 15  # adjust as needed
 url_list = []
 
 for page in range(num_pages):
     print(f"Scraping page {page + 1}...")
 
-    # Wait for listings
     WebDriverWait(driver, 15).until(
         EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href*="/rooms/"]'))
     )
 
-    urls = scrape_current_page()
-    for u in urls:
-        print(u)
-        url_list.append(u)
+    cards = scrape_card_location_from_card_elements()
+    for u, loc in cards:
+        print(f"{u} | {loc}")
+        url_list.append((u, loc))
 
     if not go_to_next_page():
         break
@@ -101,94 +109,43 @@ for page in range(num_pages):
 
 print(f"Total URLs scraped: {len(url_list)}")
 
-
-
-# function to scrape information from a details page (title, price, etc.)
-def scrape_details_page(url):
+# 🏠 Scrape individual listing
+def scrape_details_page(url, card_location):
     try:
         driver.get(url)
-        # Wait for the page to load (you can adjust this)
         time.sleep(2)
         html_content = driver.page_source
         scroll_to_bottom_incrementally()
-        time.sleep(2) 
-        # Regex pattern for scraping the title
-        title_pattern = r'<h1[^>]+>([^<]+)</h1>'
-    
-        # Scrape the title (adjust the selector according to the page structure)
-        title = re.search(title_pattern,html_content)
-        if title:
-           title = title.group(1)
-        else:
-            title = None
-        
-        price_pattern = r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)'
-        price_match = re.search(price_pattern, html_content)
+        time.sleep(2)
 
-        if price_match:
-            price = f"${price_match.group(1)}"
-        else:
-            price = None
+        title = re.search(r'<h1[^>]+>([^<]+)</h1>', html_content)
+        title = title.group(1) if title else None
 
+        price_match = re.search(r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)', html_content)
+        price = f"${price_match.group(1)}" if price_match else None
 
-        address_pattern = r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>'
-        address =  re.search(address_pattern,html_content)
-        if address:
-           address =  address.group(1)
-        else:
-            address = None
-        
-        guest_pattern = r'<li class="l7n4lsf[^>]+>([^<]+)<span'
-        guest =   re.search(guest_pattern,html_content)
-        if guest:
-           guest = guest.group(1)
-        else:
-            guest = None
-        # You can add more information to scrape (example: price, description, etc.)
-        
+        address_match = re.search(r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>', html_content)
+        address = address_match.group(1) if address_match else None
+
+        guest_match = re.search(r'<li class="l7n4lsf[^>]+>([^<]+)<span', html_content)
+        guest = guest_match.group(1) if guest_match else None
+
         bed_bath_lis = re.findall(r'<li[^>]*class="l7n4lsf[^"]*"[^>]*>(.*?)</li>', html_content, re.DOTALL)
-        bed_bath_details = []
+        bed_bath_details = [re.sub(r'<[^>]+>', '', item).replace("·", "").strip()
+                            for item in bed_bath_lis
+                            if any(x in item.lower() for x in ["bed", "bath", "bedroom"])]
 
-        for item in bed_bath_lis:
-            text = re.sub(r'<[^>]+>', '', item)  # Strip HTML tags
-            text = text.replace("·", "").strip()
-            if any(x in text.lower() for x in ["bed", "bath", "bedroom"]):
-                bed_bath_details.append(text)
+        reviews_match = re.search(r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>', html_content)
+        rating = reviews_match.group(1) if reviews_match else None
+        total_reviews = reviews_match.group(2) if reviews_match else None
 
-        
-        reviews_pattern = r'<span[^>]*aria-hidden="true"[^>]*>([\d.]+)\s*·\s*(\d+)\s*reviews</span>'
-        reviews_match = re.search(reviews_pattern, html_content)
-        if reviews_match:
-            rating = reviews_match.group(1)
-            total_reviews = reviews_match.group(2)
-        else:
-            rating = None
-            total_reviews = None
-
-
-
-        host_name_pattern = r't1gpcl1t atm_w4_16rzvi6 atm_9s_1o8liyq atm_gi_idpfg4 dir dir-ltr[^>]+>([^<]+)'
-        host_name =  re.search(host_name_pattern,html_content)
-        if host_name:
-           host_name = host_name.group(1)    
-        else:
-            host_name = None
-
-        #total_review_pattern = r'pdp-reviews-[^>]+>[^>]+>(d+[^<]+)</span>'
-        #total_review =  re.search(total_review_pattern,html_content)
-        #if total_review:
-        #   total_review =  total_review.group(1)    
-        #else:
-        #    total_review = None
-
+        host_name_match = re.search(r't1gpcl1t atm_w4_16rzvi6 atm_9s_1o8liyq atm_gi_idpfg4 dir dir-ltr[^>]+>([^<]+)', html_content)
+        host_name = host_name_match.group(1) if host_name_match else None
 
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m dir dir-ltr[^>]+><div><span[^>]+>([^<]+)'
-        host_info = re.findall(host_info_pattern,html_content)
-        host_info_list = []
-        if host_info:
-            for host_info_details in host_info:
-                 host_info_list.append(host_info_details)
+        host_info = re.findall(host_info_pattern, html_content)
 
+        # Amenities from popup
         try:
             # Click the "Show all amenities" button (span)
             show_btn = WebDriverWait(driver, 5).until(
@@ -226,54 +183,42 @@ def scrape_details_page(url):
             amenities = []
 
 
-
-                
-        # Print the scraped information (for debugging purposes)
-        print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n Amenities: {amenities}n" )
-        
-        # Return the information as a dictionary (or adjust based on your needs)
-          # Store the scraped information in a dictionary
         return {
-            "url": url,
+            "URL": url,
+            "Card_Location": card_location,
             "Title": title,
             "Price": price,
             "Address": address,
             "Guest": guest,
             "Bed_Bath_Details": bed_bath_details,
             "Rating": rating,
-            "Host_Name": host_name,
             "Total_Reviews": total_reviews,
+            "Host_Name": host_name,
             "Host_Info": host_info,
             "Amenities": amenities
         }
+
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         return None
 
-# Function to save data to CSV using pandas
-def save_to_csv(data, filename='airbnb_riyadh_najris_new(1)_data.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
-    print(f"Data saved to {filename}")
+    print(f"✅ Data saved to {filename}")
 
-
-
+# 🔁 Scrape each URL
 scraped_data = []
-
-
-# Scrape the details page for each URL stored in the url_list  
-for url in url_list:
+for url, card_location in url_list:
     print(f"Scraping details from: {url}")
-    data = scrape_details_page(url)
+    data = scrape_details_page(url, card_location)
     if data:
         scraped_data.append(data)
-     
+        print(data)
 
-# After scraping, save data to CSV
 if scraped_data:
     save_to_csv(scraped_data)
 else:
     print("No data to save.")
 
-# Close the browser
 driver.quit()
