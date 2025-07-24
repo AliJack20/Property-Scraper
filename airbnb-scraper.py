@@ -84,11 +84,11 @@ def go_to_next_page():
 
 
 # ⬅️ Collect URLs & card locations
-url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=unknown&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&search_mode=regular_search&price_filter_input_type=2&price_filter_num_nights=5&channel=EXPLORE&checkin=2025-07-21&checkout=2025-07-25"
+url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&checkin=2025-08-01&checkout=2025-08-02&price_filter_num_nights=1&zoom_level=9&location_bb=QcvOU0I9qT5Bwa9%2BQjkUzg%3D%3D"
 driver.get(url)
 time.sleep(3)
 
-num_pages = 2  # adjust as needed
+num_pages = 15  # adjust as needed
 url_list = []
 
 for page in range(num_pages):
