@@ -88,7 +88,7 @@ url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refine
 driver.get(url)
 time.sleep(3)
 
-num_pages = 15  # adjust as needed
+num_pages = 2  # adjust as needed
 url_list = []
 
 for page in range(num_pages):
@@ -202,7 +202,7 @@ def scrape_details_page(url, card_location):
         print(f"Error scraping {url}: {e}")
         return None
 
-def save_to_csv(data, filename='airbnb_riyadh_data_with_card_location.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"✅ Data saved to {filename}")
