@@ -58,14 +58,16 @@ def scrape_details_page(url):
 
         title = re.search(r'<h1[^>]*>([^<]+)</h1>', html)
         # Improved price extraction logic
-        price_pattern = r'<span class="a8jt5op[^"]*"[^>]*>\s*\$([0-9]+)'
-        price_match = re.search(price_pattern, html)
-
-        if price_match:
-            price = f"${price_match.group(1)}"
+        discounted_price_match = re.search(r'<span class="umuerxh[^"]*">\$?([\d,]+)</span>', html)
+        if discounted_price_match:
+            price = f"${discounted_price_match.group(1)}"
         else:
-            price = None
-
+            # Fall back to original price
+            original_price_match = re.search(r'<span class="s13lowb4[^"]*">\$?([\d,]+)</span>', html)
+            if original_price_match:
+                price = f"${original_price_match.group(1)}"
+            else:
+                price = None
 
         address = re.search(r'dir-ltr"><div[^>]+><section><div[^>]+ltr"><h2[^>]+>([^<]+)</h2>', html)
         guest = re.search(r'<li class="l7n4lsf[^>]+>([^<]+)<span', html)
