@@ -61,22 +61,35 @@ def scroll_to_bottom_incrementally():
         last_height = new_height
 
 # ➡️ Pagination
+# ➡️ Pagination (Fixed)
 def go_to_next_page():
     try:
+        current_url = driver.current_url
+
         next_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "a[aria-label='Next']"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
         time.sleep(1)
 
+        # Close any overlay/modal if present
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
             time.sleep(1)
         except:
-            pass
+            pass  # No modal
 
         next_button.click()
+
+        # Wait until the URL changes or new cards load
+        WebDriverWait(driver, 10).until(
+            lambda d: d.current_url != current_url
+        )
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href*="/rooms/"]'))
+        )
+
         return True
     except Exception as e:
         print(f"Couldn't navigate to next page: {e}")
@@ -88,7 +101,7 @@ url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refine
 driver.get(url)
 time.sleep(3)
 
-num_pages = 15  # adjust as needed
+num_pages = 2  # adjust as needed
 url_list = []
 
 for page in range(num_pages):
