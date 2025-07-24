@@ -189,19 +189,44 @@ def scrape_details_page(url):
             for host_info_details in host_info:
                  host_info_list.append(host_info_details)
 
-        amenities = []
         try:
-            amenity_blocks = driver.find_elements(By.CSS_SELECTOR, 'div._19xnuo97')
-            for block in amenity_blocks:
-                try:
-                    name_elem = block.find_element(By.CSS_SELECTOR, 'div.iikjzje > div')
-                    name = name_elem.text.strip()
-                    if name:
-                        amenities.append(name)
-                except:
-                    continue
-        except:
+            # Click the "Show all amenities" button (span)
+            show_btn = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, '//span[contains(text(), "Show all") and contains(text(), "amenities")]')
+                )
+            )
+            driver.execute_script("arguments[0].click();", show_btn)
+            time.sleep(1)
+
+            # Wait for modal to appear
+            WebDriverWait(driver, 8).until(
+                EC.presence_of_element_located((By.XPATH, '//div[@role="dialog"]'))
+            )
+            time.sleep(0.5)
+
+            # Now fetch amenities in modal
+            amenity_elements = driver.find_elements(
+                By.XPATH, '//div[contains(@id, "row-title") and contains(@class, "atm_7l_jt7fhx")]'
+            )
+            amenities = [el.text.strip() for el in amenity_elements if el.text.strip()]
+
+            # Close the modal
+            try:
+                close_btn = WebDriverWait(driver, 3).until(
+                    EC.element_to_be_clickable((By.XPATH, '//div[@role="dialog"]//button[@aria-label="Close"]'))
+                )
+                driver.execute_script("arguments[0].click();", close_btn)
+                time.sleep(1)
+            except Exception as close_e:
+                print("⚠️ Modal close failed:", close_e)
+
+        except Exception as e:
+            print("❌ Amenities error:", e)
             amenities = []
+
+
+
                 
         # Print the scraped information (for debugging purposes)
         print(f"Title: {title}n Price:{price}n Address: {address}n Guest: {guest}n bed_bath_details:{bed_bath_details}n Ratings: {rating}n Host_name: {host_name}n total_review: {total_reviews}n Host Info: {host_info_list}n Amenities: {amenities}n" )
