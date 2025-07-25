@@ -15,5 +15,5 @@ else:
     combined_df = pd.concat([pd.read_excel(file) for file in xlsx_files], ignore_index=True)
     
     # Save to a new Excel file (or CSV if you prefer)
-    combined_df.to_excel('bayut_combined_output_105pages.xlsx', index=False)
+    combined_df.to_excel('bayut_combined_output.xlsx', index=False)
     print(f"✅ Combined {len(xlsx_files)} files into 'combined_output.xlsx'")
