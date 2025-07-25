@@ -291,7 +291,7 @@ def scrape_listings_from_cards(driver):
 EMAIL = 'support@livedin.co'
 PASSWORD = 'Livedin2025!'
 
-base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/page-105/"
+base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/page-140/"
 
 
 driver = create_driver()
@@ -304,7 +304,7 @@ if not login(driver, EMAIL, PASSWORD):
 
 # === Scrape paginated results ===
 all_data = []
-num_pages = 35
+num_pages = 45
 for page in range(1, num_pages + 1):
     url = base_url if page == 1 else f"{base_url}?page={page}"
     print(f"\n📄 Scraping page {page}: {url}")
