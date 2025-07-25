@@ -23,21 +23,31 @@ stealth(driver,
     fix_hairline=True,
 )
 
+num_pages = 2  
+
+
 # === Visit Gathern Search Page ===
+urls = []
 base_url = "https://gathern.co/en/search?chalet_cats=6%2C7%2C8%2C9&city=3"
-driver.get(base_url)
 
-# Wait for cards to load
-WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.e1aemmpj2")))
-time.sleep(3)
+for page in range(1, num_pages + 1):
+    url = f"{base_url}&page={page}"
+    print(f"🌐 Visiting page {page}: {url}")
+    driver.get(url)
+    
+    try:
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.e1aemmpj2")))
+        time.sleep(2)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
 
-# Scroll to load more listings (if lazy loaded)
-driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-time.sleep(3)
-
-cards = driver.find_elements(By.CSS_SELECTOR, "a.e1aemmpj2")
-urls = [card.get_attribute("href") for card in cards]
-print(f"✅ Found {len(urls)} listings")
+        cards = driver.find_elements(By.CSS_SELECTOR, "a.e1aemmpj2")
+        page_urls = [card.get_attribute("href") for card in cards if card.get_attribute("href")]
+        print(f"✅ Page {page}: Found {len(page_urls)} listings")
+        urls.extend(page_urls)
+    except Exception as e:
+        print(f"⚠️ Error loading page {page}: {e}")
+        continue
 
 results = []
 
@@ -114,6 +124,14 @@ for index, link in enumerate(urls):
             beds = ""
             baths = ""
 
+        try:
+            amenities_list = driver.find_elements(By.CSS_SELECTOR, 'ul.ltr-1gtoalg.e1hx4far2 li')
+            amenities = [amenity.text.strip() for amenity in amenities_list if amenity.text.strip()]
+            amenities_str = ', '.join(amenities)
+        except:
+            amenities_str = ''
+
+
 
         results.append({
             "URL": link,
@@ -125,9 +143,10 @@ for index, link in enumerate(urls):
             "Rating": rating,
             "Reviews": reviews,
             "Beds": beds,
-            "Baths": baths
+            "Baths": baths,
+            'Amenities': amenities_str
         })
-        print(results)
+        #print(results)
 
     except Exception as e:
         print(f"⚠️ Error scraping {link}: {e}")
