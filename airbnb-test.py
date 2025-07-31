@@ -61,35 +61,22 @@ def scroll_to_bottom_incrementally():
         last_height = new_height
 
 # ➡️ Pagination
-# ➡️ Pagination (Fixed)
 def go_to_next_page():
     try:
-        current_url = driver.current_url
-
         next_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "a[aria-label='Next']"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
         time.sleep(1)
 
-        # Close any overlay/modal if present
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
             time.sleep(1)
         except:
-            pass  # No modal
+            pass
 
         next_button.click()
-
-        # Wait until the URL changes or new cards load
-        WebDriverWait(driver, 10).until(
-            lambda d: d.current_url != current_url
-        )
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href*="/rooms/"]'))
-        )
-
         return True
     except Exception as e:
         print(f"Couldn't navigate to next page: {e}")
@@ -97,11 +84,11 @@ def go_to_next_page():
 
 
 # ⬅️ Collect URLs & card locations
-url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&checkin=2025-08-01&checkout=2025-08-02&price_filter_num_nights=1&zoom_level=9&query=Riyadh%2C%20Riyadh%20Region%2C%20Saudi%20Arabia&place_id=ChIJbzwfOtKkLz4R5yvDtOxu8y4&pagination_search=true&federated_search_session_id=24a73957-9ab0-45dd-86bc-8682eb074439&cursor=eyJzZWN0aW9uX29mZnNldCI6MCwiaXRlbXNfb2Zmc2V0IjoyNTIsInZlcnNpb24iOjF9"
+url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refinement_paths%5B%5D=%2Fhomes&acp_id=d67b445a-d3a3-4dc9-be4f-15cc744ea123&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&flexible_trip_lengths%5B%5D=one_week&monthly_start_date=2025-08-01&monthly_length=3&monthly_end_date=2025-11-01&search_mode=regular_search&price_filter_input_type=2&channel=EXPLORE&checkin=2025-08-01&checkout=2025-08-02&price_filter_num_nights=1&zoom_level=9&location_bb=QcvOU0I9qT5Bwa9%2BQjkUzg%3D%3D"
 driver.get(url)
 time.sleep(3)
 
-num_pages = 2  # adjust as needed
+num_pages = 1 # adjust as needed
 url_list = []
 
 for page in range(num_pages):
@@ -158,6 +145,22 @@ def scrape_details_page(url, card_location):
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m dir dir-ltr[^>]+><div><span[^>]+>([^<]+)'
         host_info = re.findall(host_info_pattern, html_content)
 
+                # ⬇️ Extract Reviews
+        try:
+            # Wait for review spans to load
+            time.sleep(1)
+            review_elements = driver.find_elements(By.CSS_SELECTOR, 'span[class*="l1h825yc"]')
+            reviews = []
+
+            for review in review_elements[:5]:  # limit to first 5
+                text = review.text.strip()
+                if text:
+                    reviews.append(text)
+        except Exception as e:
+            print("❌ Review scrape error:", e)
+            reviews = []
+
+
         # Amenities from popup
         try:
             # Click the "Show all amenities" button (span)
@@ -208,14 +211,15 @@ def scrape_details_page(url, card_location):
             "Total_Reviews": total_reviews,
             "Host_Name": host_name,
             "Host_Info": host_info,
-            "Amenities": amenities
+            "Amenities": amenities,
+            "Reviews": reviews
         }
 
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         return None
 
-def save_to_csv(data, filename='airbnb_riyadh_data_page15.csv'):
+def save_to_csv(data, filename='airbnb_riyadh_data.csv'):
     df = pd.DataFrame(data)
     df.to_csv(filename, index=False)
     print(f"✅ Data saved to {filename}")
