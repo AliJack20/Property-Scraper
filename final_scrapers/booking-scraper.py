@@ -14,7 +14,7 @@ from selenium.webdriver.remote.webelement import WebElement
 # === Settings ===
 BASE_URL = "https://www.booking.com/searchresults.en-gb.html?ss=Riyadh%2C+Riyadh+Province%2C+Saudi+Arabia&efdco=1&label=en-pk-booking-desktop-4kfLJxx34ezdJh1Wp5MtEAS652796017653%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-65526620%3Alp9077147%3Ali%3Adec%3Adm&aid=2311236&lang=en-gb&sb=1&src_elem=sb&src=index&dest_id=900040280&dest_type=city&ac_position=0&ac_click_type=b&ac_langcode=en&ac_suggestion_list_length=5&search_selected=true&search_pageview_id=6d714a6623c90636&ac_meta=GhA2ZDcxNGE2NjIzYzkwNjM2IAAoATICZW46BlJpeWFkaEAASgBQAA%3D%3D&group_adults=2&no_rooms=1&group_children=0"  # <-- Change to your target
 PAGES_TO_SCRAPE = 1
-OUTPUT_CSV = "booking_com_riyadh.csv"
+OUTPUT_CSV = "storage/booking_com_riyadh.csv"
 
 options = uc.ChromeOptions()
 options.add_argument("--start-maximized")
@@ -53,10 +53,12 @@ def scrape_listing(url, idx, total):
         # Title
         # Title
         try:
-            title = driver.find_element(By.CSS_SELECTOR, 'h2.pp-header__title').text.strip()
+            title_elem = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'h2.pp-header__title, h1'))
+            )
+            title = title_elem.text.strip()
         except:
             title = ""
-
 
         # Location
         try:
