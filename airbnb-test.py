@@ -162,6 +162,23 @@ def scrape_details_page(url, card_location):
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m dir dir-ltr[^>]+><div><span[^>]+>([^<]+)'
         host_info = re.findall(host_info_pattern, html_content)
 
+                # 📸 Scrape up to 5 images
+        try:
+            image_elements = driver.find_elements(By.CSS_SELECTOR, 'img.iaemi15')  # Airbnb's image class
+            image_urls = []
+            seen = set()
+            for img in image_elements:
+                src = img.get_attribute("src")
+                if src and src not in seen:
+                    image_urls.append(src)
+                    seen.add(src)
+                if len(image_urls) >= 5:
+                    break
+        except Exception as e:
+            print("❌ Image scrape error:", e)
+            image_urls = []
+
+
                 # ⬇️ Extract Reviews
         try:
             # Wait for review spans to load
@@ -229,7 +246,8 @@ def scrape_details_page(url, card_location):
             "Host_Name": host_name,
             "Host_Info": host_info,
             "Amenities": amenities,
-            "Reviews": reviews
+            "Reviews": reviews,
+            "Image_URLs": image_urls
         }
 
     except Exception as e:
