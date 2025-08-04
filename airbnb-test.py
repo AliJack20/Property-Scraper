@@ -10,6 +10,7 @@ import pandas as pd
 
 options = webdriver.ChromeOptions()
 options.add_argument("start-maximized")
+options.add_argument("--headless")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option('useAutomationExtension', False)
 driver = webdriver.Chrome(options=options)
@@ -23,6 +24,19 @@ stealth(driver,
         renderer="Intel Iris OpenGL Engine",
         fix_hairline=True,
         )
+def close_translation_popup():
+    try:
+        popup_close = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'span.i3tjjh1.atm_mk_h2mmj6')
+            )
+        )
+        popup_close.click()
+        print("🛑 Translation popup closed")
+        time.sleep(0.5)
+    except Exception:
+        pass  # Popup not present — safe to continue
+
 
 # 🔍 Extracts both URL and card location from listing cards
 def scrape_card_location_from_card_elements():
@@ -114,6 +128,9 @@ def scrape_details_page(url, card_location):
     try:
         driver.get(url)
         time.sleep(2)
+
+        close_translation_popup()
+
         html_content = driver.page_source
         scroll_to_bottom_incrementally()
         time.sleep(2)

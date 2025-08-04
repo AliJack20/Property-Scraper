@@ -10,6 +10,7 @@ import pandas as pd
 
 options = webdriver.ChromeOptions()
 options.add_argument("start-maximized")
+options.add_argument("--headless")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option('useAutomationExtension', False)
 driver = webdriver.Chrome(options=options)
@@ -23,6 +24,19 @@ stealth(driver,
         renderer="Intel Iris OpenGL Engine",
         fix_hairline=True,
         )
+def close_translation_popup():
+    try:
+        popup_close = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'span.i3tjjh1.atm_mk_h2mmj6')
+            )
+        )
+        popup_close.click()
+        print("🛑 Translation popup closed")
+        time.sleep(0.5)
+    except Exception:
+        pass  # Popup not present — safe to continue
+
 
 # 🔍 Extracts both URL and card location from listing cards
 def scrape_card_location_from_card_elements():
@@ -88,7 +102,7 @@ url = "https://www.airbnb.com/s/Riyadh--Riyadh-Region--Saudi-Arabia/homes?refine
 driver.get(url)
 time.sleep(3)
 
-num_pages = 15  # adjust as needed
+num_pages = 1 # adjust as needed
 url_list = []
 
 for page in range(num_pages):
@@ -114,6 +128,9 @@ def scrape_details_page(url, card_location):
     try:
         driver.get(url)
         time.sleep(2)
+
+        close_translation_popup()
+
         html_content = driver.page_source
         scroll_to_bottom_incrementally()
         time.sleep(2)
@@ -144,6 +161,22 @@ def scrape_details_page(url, card_location):
 
         host_info_pattern = r'd1u64sg5[^"]+atm_67_1vlbu9m dir dir-ltr[^>]+><div><span[^>]+>([^<]+)'
         host_info = re.findall(host_info_pattern, html_content)
+
+                # ⬇️ Extract Reviews
+        try:
+            # Wait for review spans to load
+            time.sleep(1)
+            review_elements = driver.find_elements(By.CSS_SELECTOR, 'span[class*="l1h825yc"]')
+            reviews = []
+
+            for review in review_elements[:5]:  # limit to first 5
+                text = review.text.strip()
+                if text:
+                    reviews.append(text)
+        except Exception as e:
+            print("❌ Review scrape error:", e)
+            reviews = []
+
 
         # Amenities from popup
         try:
@@ -195,7 +228,8 @@ def scrape_details_page(url, card_location):
             "Total_Reviews": total_reviews,
             "Host_Name": host_name,
             "Host_Info": host_info,
-            "Amenities": amenities
+            "Amenities": amenities,
+            "Reviews": reviews
         }
 
     except Exception as e:
