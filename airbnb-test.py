@@ -123,6 +123,53 @@ for page in range(num_pages):
 
 print(f"Total URLs scraped: {len(url_list)}")
 
+# Extract all reviews from modal
+def get_all_reviews_from_modal():
+    all_reviews = []
+    try:
+        # Click the "Show all reviews" button if present
+        show_all_btn = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="pdp-show-all-reviews-button"]'))
+        )
+        driver.execute_script("arguments[0].click();", show_all_btn)
+        time.sleep(1)
+
+        # Wait for modal to appear
+        WebDriverWait(driver, 8).until(
+            EC.presence_of_element_located((By.XPATH, '//div[@role="dialog"]'))
+        )
+
+        # Scroll inside modal to load all reviews
+        modal = driver.find_element(By.XPATH, '//div[@role="dialog"]')
+        last_height = driver.execute_script("return arguments[0].scrollHeight", modal)
+        while True:
+            driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", modal)
+            time.sleep(1)
+            new_height = driver.execute_script("return arguments[0].scrollHeight", modal)
+            if new_height == last_height:
+                break
+            last_height = new_height
+
+        # Extract all review texts
+        review_elements = modal.find_elements(By.CSS_SELECTOR, 'span.l1h825yc')
+        all_reviews = [rev.text.strip() for rev in review_elements if rev.text.strip()]
+
+        # Close modal
+        try:
+            close_btn = WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.XPATH, '//div[@role="dialog"]//button[@aria-label="Close"]'))
+            )
+            driver.execute_script("arguments[0].click();", close_btn)
+            time.sleep(1)
+        except:
+            pass
+
+    except Exception as e:
+        print("❌ No reviews modal or error extracting:", e)
+
+    return all_reviews
+
+
 # 🏠 Scrape individual listing
 def scrape_details_page(url, card_location):
     try:
@@ -180,21 +227,17 @@ def scrape_details_page(url, card_location):
 
 
                 # ⬇️ Extract Reviews
-        try:
-            # Wait for review spans to load
-            time.sleep(1)
-            review_elements = driver.find_elements(By.CSS_SELECTOR, 'span[class*="l1h825yc"]')
-            reviews = []
+        # Reviews - first try modal, else fallback to inline
+        reviews = get_all_reviews_from_modal()
+        if not reviews:
+            try:
+                review_elements = driver.find_elements(By.CSS_SELECTOR, 'span.l1h825yc')
+                reviews = [rev.text.strip() for rev in review_elements if rev.text.strip()]
+            except Exception as e:
+                print("❌ Inline review scrape error:", e)
+                reviews = []
 
-            for review in review_elements[:5]:  # limit to first 5
-                text = review.text.strip()
-                if text:
-                    reviews.append(text)
-        except Exception as e:
-            print("❌ Review scrape error:", e)
-            reviews = []
-
-
+        
         # Amenities from popup
         try:
             # Click the "Show all amenities" button (span)
