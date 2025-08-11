@@ -92,29 +92,46 @@ def scrape_listing(url, idx, total):
 
         # Rating
         try:
-            rating = driver.execute_script("""
-                const ratingDiv = document.querySelector('div.f63b14ab7a.dff2e52086');
-                return ratingDiv ? ratingDiv.textContent.trim() : '';
-            """)
+            rating_label = driver.find_element(By.CSS_SELECTOR, "div.f63b14ab7a.f546354b44.becbee2f63").text.strip()
         except:
-            rating = ""
+            rating_label = ""
+
+        try:
+            rating_score = driver.find_element(By.CSS_SELECTOR, "div.b5cd09854e.d10a6220b4").text.strip()
+        except:
+            rating_score = ""
+
 
         # Amenities
+                # Amenities - Extract from static section or open modal if necessary
+        amenities = ""
         try:
-            amenity_elems = driver.find_elements(By.CSS_SELECTOR, 'div[class*="hotel-facilities"] li')
-            amenities = "; ".join([a.text.strip() for a in amenity_elems if a.text.strip()])
-        except:
+            # Wait for any amenities section to load (up to 5s)
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.bui-list__body"))
+            )
+
+            amenity_elems = driver.find_elements(By.CSS_SELECTOR, "div.bui-list__description")
+            amenities_list = [el.text.strip() for el in amenity_elems if el.text.strip()]
+            amenities = ", ".join(amenities_list)
+
+        except Exception as e:
+            print("Amenities not found or took too long to load.")
             amenities = ""
 
-        print(title + " , " + location + ", " + rating + ", " + price + ", " + amenities)
+
+
+        print(title + " , " + location + ", " + rating_label + ","+rating_score+ ", " + price + ", " + amenities)
 
         all_listings.append({
             "URL": url,
             "Title": title,
             "Location": location,
             "Price": price,
-            "Rating": rating,
+            "Rating": rating_label,
+            "Rating Score": rating_score,
             "Amenities": amenities
+
         })
 
     except Exception as e:
@@ -129,7 +146,7 @@ finally:
 
 # === Save to CSV ===
 with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.DictWriter(f, fieldnames=["URL", "Title", "Location", "Price", "Rating", "Amenities"])
+    writer = csv.DictWriter(f, fieldnames=["URL", "Title", "Location", "Price", "Rating","Rating_Score", "Amenities"])
     writer.writeheader()
     writer.writerows(all_listings)
 
