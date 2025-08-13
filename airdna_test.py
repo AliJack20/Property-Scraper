@@ -30,48 +30,62 @@ stealth(driver,
 # Login Function
 # =========================
 def login_to_airdna():
-    email = input("Enter AirDNA Email: ")
-    password = input("Enter AirDNA Password: ")
+    email = "ali.siddiqui@livedin.co"
 
-    # Step 1: Go to main login page
-    driver.get("https://www.airdna.co/vacation-rental-data/app/login")
+    # Step 1: Go to AirDNA login page
+    driver.get("https://www.airdna.co/login")
 
-    # Step 2: Click the "Log in" button that redirects to app.airdna.co
+    # Step 2: Click the "Log in" button that triggers the popup
     try:
         login_btn = WebDriverWait(driver, 15).until(
             EC.element_to_be_clickable((By.XPATH, '//a[contains(text(), "Log in")]'))
         )
         driver.execute_script("arguments[0].click();", login_btn)
-        print("🔄 Redirecting to app login page...")
+        print("🔄 Login popup opened...")
     except Exception as e:
-        print("❌ Could not find initial Log in button:", e)
-        return
+        print("❌ Could not click initial Log in button:", e)
+        return False
 
-    # Step 3: Wait for the login form on app.airdna.co
+    # Step 3: Wait for email input in popup
     try:
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.NAME, "email")))
-        print("✅ Login form loaded.")
-    except:
-        print("❌ Login form did not load.")
-        return
+        email_input = WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.ID, "loginId"))
+        )
+        email_input.send_keys(email)
+        print("📨 Email entered.")
+    except Exception as e:
+        print("❌ Could not find email input in popup:", e)
+        return False
 
-    # Step 4: Enter credentials
-    driver.find_element(By.NAME, "email").send_keys(email)
-    driver.find_element(By.NAME, "password").send_keys(password)
-
-    # Step 5: Click submit
+    # Step 4: Click "Send me a login link" button
     try:
-        submit_btn = driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
-        driver.execute_script("arguments[0].click();", submit_btn)
-    except:
-        print("❌ Could not click login submit button.")
-        return
+        send_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Send me a login link")]'))
+        )
+        driver.execute_script("arguments[0].click();", send_btn)
+        print("✅ Login link requested. Check your email.")
 
-    # Step 6: Wait for dashboard/home page load
-    WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.TAG_NAME, "body"))
-    )
-    print("✅ Logged in successfully!")
+        # Stop AirDNA from redirecting to another page
+        time.sleep(1)  # small wait to ensure click event fires
+        driver.execute_script("window.stop();")
+        print("⏸️ Redirect stopped. Waiting for magic link...")
+    except Exception as e:
+        print("❌ Could not click send login link button:", e)
+        return False
+
+
+    # Step 5: Freeze here until user pastes link
+    print("\n📧 Waiting for you to paste the magic login link...")
+    magic_url = input("Paste the magic login link from your email and press Enter: ").strip()
+
+    # Step 6: Go directly to magic link
+    driver.get(magic_url)
+    WebDriverWait(driver, 15).until(EC.url_contains("app.airdna.co"))
+    print("✅ Logged in successfully via magic link.")
+
+    return True
+
+
 
 # =========================
 # Scroll Function
