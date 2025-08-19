@@ -139,7 +139,7 @@ def save_to_csv(data, filename='airdna_data.csv'):
 # =========================
 login_with_magic_link()
 
-target_url = "https://app.airdna.co/data/sa/102130?lat=23.530462&lng=45.141804&zoom=5"
+target_url = "https://app.airdna.co/data/us/airdna-337/occupancy?lat=22.05161&lng=-159.540019&zoom=9"
 driver.get(target_url)
 time.sleep(5)
 
