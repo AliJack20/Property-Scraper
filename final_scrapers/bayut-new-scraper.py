@@ -176,6 +176,7 @@ def scrape_listings_from_cards(driver):
         reactivated_date = None
         agency_name = None
         agent_name = None
+        listing_age= None
 
         if data["URL"]:
             original_window = driver.current_window_handle
@@ -200,6 +201,16 @@ def scrape_listings_from_cards(driver):
                     furnishing = driver.find_element(By.XPATH, '//li[span[text()="Furnishing"]]/span[@aria-label="Furnishing"]').text.strip()
                 except:
                     furnishing = None
+
+                listing_age = None
+                try:
+                    age_elem = driver.find_element(By.CSS_SELECTOR, 'span._9a7b7a70')
+                    listing_age = age_elem.text.strip()
+                except:
+                    listing_age = None
+
+                # Save it
+                data["Listing Age"] = listing_age
 
                 # Reactivated Date
                 try:
@@ -277,6 +288,7 @@ def scrape_listings_from_cards(driver):
         data["Deed Location"] = location_deed
         data["Furnishing"] = furnishing
         data["Reactivated Date"] = reactivated_date
+        data["Listing Age"] = listing_age
         data["Agency Name"] = agency_name
         data["Agent Name"] = agent_name
 
@@ -291,7 +303,7 @@ def scrape_listings_from_cards(driver):
 EMAIL = 'support@livedin.co'
 PASSWORD = 'Livedin2025!'
 
-base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/page-230/"
+base_url = "https://www.bayut.sa/en/to-rent/properties/riyadh/?rent_frequency=yearly&sort=price_desc"
 
 
 driver = create_driver()
@@ -304,7 +316,7 @@ if not login(driver, EMAIL, PASSWORD):
 
 # === Scrape paginated results ===
 all_data = []
-num_pages = 45
+num_pages = 340
 for page in range(1, num_pages + 1):
     url = base_url if page == 1 else f"{base_url}?page={page}"
     print(f"\n📄 Scraping page {page}: {url}")
