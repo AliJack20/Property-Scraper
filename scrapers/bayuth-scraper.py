@@ -61,7 +61,7 @@ def get_listing_age(driver, url):
 
 
 # === Main Execution ===
-INPUT_CSV = "Market Analysis - Lease Data.csv"     # your file with URLs
+INPUT_CSV = "scrapers/Market Analysis - Lease Data.csv"     # your file with URLs
 OUTPUT_CSV = "bayut_final_properties.xlsx"   # file with Listing Age added
 
 df = pd.read_csv(INPUT_CSV)
