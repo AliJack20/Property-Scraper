@@ -83,5 +83,5 @@ driver.quit()
 df["Listing Age"] = listing_ages
 
 # save updated CSV
-df.to_csv(OUTPUT_CSV, index=False)
+df.to_excel(OUTPUT_CSV, index=False)
 print(f"✅ Done! Results saved to {OUTPUT_CSV}")
