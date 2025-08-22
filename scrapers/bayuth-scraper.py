@@ -65,7 +65,7 @@ INPUT_CSV = "scrapers/Market Analysis - Lease Data.csv"     # your file with URL
 OUTPUT_CSV = "bayut_final_properties.xlsx"   # file with Listing Age added
 
 df = pd.read_csv(INPUT_CSV)
-df = df.head(20)
+#df = df.head(20)
 
 driver = create_driver()
 
