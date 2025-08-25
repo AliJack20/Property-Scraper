@@ -80,50 +80,50 @@ try:
             driver.get(url)
             print(f"\n🔍 Scraping listing {idx}/{len(listing_urls)}: {url}")
             time.sleep(3)
-
+    
             # Extract price
-           try:
+            try:
                 price = WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "_price__EH7rC"))
                 ).text
-                #price = re.sub(r"[^\d,]", "", price).strip()
+                # price = re.sub(r"[^\d,]", "", price).strip()
             except:
                 price = ""
-
+    
             # Extract title
             try:
                 title_elem = driver.find_element(By.CLASS_NAME, "_title__eliuu")
                 title = title_elem.text.strip()
             except:
                 title = ""
-
-
+    
             # Extract specs (area, beds, baths)
             try:
                 items = driver.find_elements(By.CLASS_NAME, "_item___4Sv8")
                 area = beds = baths = ""
-
+    
                 for item in items:
                     try:
                         label = item.find_element(By.CLASS_NAME, "_label___qjLO").text.strip().lower()
                         value = item.find_element(By.CLASS_NAME, "_value__yF2Fx").text.strip()
                     except:
                         continue
-
+    
                     # Area
                     if "area" in label or "المساحة" in label:
                         area = re.sub(r"[^\d]", "", value)
-
+    
                     # Bedrooms
                     elif "bedroom" in label or "غرف النوم" in label:
                         beds = re.sub(r"[^\d]", "", value)
-
+    
                     # Bathrooms
                     elif "bath" in label or "restroom" in label or "دورات المياه" in label:
                         baths = re.sub(r"[^\d]", "", value)
-
+    
             except:
                 area = beds = baths = ""
+
 
             # Extract features (amenities)
             features_str = extract_features_from_detail_page(driver, url)
