@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/800"
+BASE_URL = "https://sa.aqar.fm/%D8%B4%D9%82%D9%82-%D9%84%D9%84%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1/%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/550"
 PAGES_TO_SCRAPE = 75
 OUTPUT_CSV = "aqar_listings_final.csv"
 
@@ -82,9 +82,9 @@ try:
             time.sleep(3)
 
             # Extract price
-            try:
+           try:
                 price = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "_price__X51mi"))
+                    EC.presence_of_element_located((By.CLASS_NAME, "_price__EH7rC"))
                 ).text
                 #price = re.sub(r"[^\d,]", "", price).strip()
             except:
@@ -100,17 +100,28 @@ try:
 
             # Extract specs (area, beds, baths)
             try:
-                specs = driver.find_elements(By.CLASS_NAME, "_spec__SIJiK")
+                items = driver.find_elements(By.CLASS_NAME, "_item___4Sv8")
                 area = beds = baths = ""
-                for spec in specs:
-                    icon = spec.find_element(By.TAG_NAME, "img").get_attribute("alt")
-                    value = spec.text.strip()
-                    if "المساحة" in icon:
-                        area = re.sub(r"[^\d,]", "", value)
-                    elif "عدد الغرف" in icon:
+
+                for item in items:
+                    try:
+                        label = item.find_element(By.CLASS_NAME, "_label___qjLO").text.strip().lower()
+                        value = item.find_element(By.CLASS_NAME, "_value__yF2Fx").text.strip()
+                    except:
+                        continue
+
+                    # Area
+                    if "area" in label or "المساحة" in label:
+                        area = re.sub(r"[^\d]", "", value)
+
+                    # Bedrooms
+                    elif "bedroom" in label or "غرف النوم" in label:
                         beds = re.sub(r"[^\d]", "", value)
-                    elif "عدد الحمامات" in icon:
+
+                    # Bathrooms
+                    elif "bath" in label or "restroom" in label or "دورات المياه" in label:
                         baths = re.sub(r"[^\d]", "", value)
+
             except:
                 area = beds = baths = ""
 
